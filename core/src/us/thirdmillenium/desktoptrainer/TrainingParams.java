@@ -30,10 +30,10 @@ public interface TrainingParams {
 
     /** The base folder to store all GA run information in.
      *  These files will be generated for you. */
-    static final String runPath         = "desktop/docs/GARunOutput/Run1";
+    static final String GA_OutputPath   = "desktop/docs/GARunOutput/Run/";
 
     /** Path to the base NN to be used by GA. */
-    static final String PathToBaseNN    = "desktop/docs/BaseANNs/MLP4.nnet";
+    static final String PathToBaseNN    = "desktop/docs/BaseANNs/FirstTest.nnet";
 
     /** Path to the Training CSVs */
     static final String PathToCSV       = "desktop/docs/TrainingCSVs/trainingCSV2.csv";
@@ -44,28 +44,28 @@ public interface TrainingParams {
 	 */
 
     /** The number of Genomes to have each generation. */
-    static final int NumGenomes = 300;
+    static final int NumGenomes = 500;
 
     /** The number of Generations to run the GA for. */
-    static final int NumGenerations = 50;
+    static final int NumGenerations = 5;
 
     /** How many Elite Genomes to keep? **/
     static final int NumEliteGenomes = (int)(NumGenomes * 0.20);
 
     /** Perform Crossovers. */
-    static final boolean PerformCrossovers = false;
+    static final boolean PerformCrossovers = true;
 
-    /** The number of Crossovers between 2 Elite parents.  Must be >= 2! */
-    static final int NumCrossovers = 2;
+    /** Percent of network weights to Crossover */
+    static final double CrossoverPercent = 0.30;
 
     /** Perform Mutations. */
     static final boolean PerformMutations = true;
 
     /** What percent (+/-) of the weights should be mutated. */
-    static final double PercentMutations = 0.75;
+    static final double PercentMutations = 0.70;
 
     /** Maximum percent change performed by mutation. */
-    static final double MaxPercentMutationChange = 0.25;
+    static final double MaxPercentMutationChange = 0.15;
 
     /** Number of Threads used by FitnessScorer */
     static final int NumThreads = 10;
@@ -75,19 +75,20 @@ public interface TrainingParams {
 	 * Game Simulation Parameters
 	 */
 
-    /** The path to the level to train NN on */
-    static final String TileMapLevelPath = "core/assets/MyCrappyMap2.tmx";
+    /** All TileMap levels reside in this directory */
+    static final String TileMapsPath            = "core/assets/";
 
-    static final String TileMapsPath = "core/assets/";
+    /** The path to the level to train NN on */
+    static final String TileMapLevelPath        = "core/assets/MyCrappyMap2.tmx";
 
     /** Texture (*.png) for Training Agent. */
-    static final String TrainingAgentLivePNG = "core/assets/goodGuyDotArrow.png";
+    static final String TrainingAgentLivePNG    = "core/assets/goodGuyDotArrow.png";
 
     /** Texture (*.png) for Shooting Agent. */
-    static final String ShootingAgentLivePNG = "core/assets/badGuyDotArrow.png";
+    static final String ShootingAgentLivePNG    = "core/assets/badGuyDotArrow.png";
 
     /** Texture for a deceased dot. */
-    static final String DeadAgentPNG = "core/assets/deadDot.png";
+    static final String DeadAgentPNG            = "core/assets/deadDot.png";
 
 
     /** Pixel Size for Tiles */
@@ -103,7 +104,7 @@ public interface TrainingParams {
     static final int NumCellsX = 25;
 
     /** The number of simulation steps to take. Assume ~30 FPS, then 1800 is ~1 minute. */
-    static final int SimulationTimeSteps = 1200;
+    static final int SimulationTimeSteps = 2700;
 
     /** Assumed FPS rate. */
     static final double FramesPerSecond = 30;

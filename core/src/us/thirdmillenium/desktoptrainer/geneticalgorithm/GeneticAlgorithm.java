@@ -3,10 +3,7 @@ package us.thirdmillenium.desktoptrainer.geneticalgorithm;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Random;
+import java.util.*;
 
 import org.neuroph.core.NeuralNetwork;
 
@@ -32,7 +29,6 @@ public class GeneticAlgorithm extends ApplicationAdapter {
 		buildOutputFolders();
 		
 		// Setup Test Environment
-		//this.BaseEnviro = new NoGraphicsEnvironment("MyCrappyMap.tmx", 32, null);		
 		this.random = new Random();
 		
 		// Setup BaseNN
@@ -52,9 +48,9 @@ public class GeneticAlgorithm extends ApplicationAdapter {
 	
 	@SuppressWarnings("unchecked")
 	private void runGA() {
-		// Initial Genome Population (with error check)
+		// Initial Genome Population
 		//ArrayList<Genome> GenomePopulation = generateInitialGenomePopulation();
-		ArrayList<Genome> GenomePopulation = generateInitialGenomePopulation2(this.BaseNN);
+		ArrayList<Genome> GenomePopulation = generateInitialGenomePopulationFromNN(this.BaseNN);
 		ArrayList<Long[]> ScoreList = new ArrayList<Long[]>(TrainingParams.NumGenerations + 2); 
 		if( GenomePopulation == null ) { return; }
 		
@@ -62,7 +58,7 @@ public class GeneticAlgorithm extends ApplicationAdapter {
 		for( int i = 1; i <= TrainingParams.NumGenerations; i++ ) {
 			System.out.print("Beginning Generation " + i + " ... ");
 			
-			// Step 1 : Calculate Fitness for each Genome *** MAKE PARALLEL!!! ***
+			// Step 1 : Calculate Fitness for each Genome ***  PARALLEL!!! ***
 			FitnessScorer fitScore = new FitnessScorer(GenomePopulation);
 			fitScore.runFitnessScorer();
 			
@@ -95,7 +91,7 @@ public class GeneticAlgorithm extends ApplicationAdapter {
 	 * Builds Output Folders
 	 */
 	private void buildOutputFolders() {
-		File file = new File(TrainingParams.runPath);
+		File file = new File(TrainingParams.GA_OutputPath);
 		
 		if(!file.exists()) {
 			if( file.mkdir()) {
@@ -107,11 +103,11 @@ public class GeneticAlgorithm extends ApplicationAdapter {
 			// Build SubFolders			
 			for( int i = 1; i <= TrainingParams.NumGenerations; i++) {
 				if( i < 10) {
-					file = new File(TrainingParams.runPath + "\\Gen_00" + i);
+					file = new File(TrainingParams.GA_OutputPath + "Gen_00" + i);
 				} else if( i < 100){
-					file = new File(TrainingParams.runPath + "\\Gen_0" + i);
+					file = new File(TrainingParams.GA_OutputPath + "Gen_0" + i);
 				} else {
-					file = new File(TrainingParams.runPath + "\\Gen_" + i);
+					file = new File(TrainingParams.GA_OutputPath + "Gen_" + i);
 				}
 
 				if(!file.exists()) {
@@ -129,13 +125,13 @@ public class GeneticAlgorithm extends ApplicationAdapter {
 	
 	private void writeGenomesToFile(ArrayList<Genome> genomes, ArrayList<Long[]> scores, int generation) {
 		Long[] newScores = new Long[genomes.size()];
-		String basePath = TrainingParams.runPath + "\\Gen_";
+		String basePath = TrainingParams.GA_OutputPath + "Gen_";
 		
 		// Gen_xxx folder for this NN
 		String genPath;
-		if( generation < 10 ) { genPath = basePath + "00" + generation + "\\"; }
-		else if(generation < 100) { genPath = basePath + "0" + generation + "\\"; }
-		else { genPath = basePath + generation + "\\"; }
+		if( generation < 10 ) { genPath = basePath + "00" + generation + "/"; }
+		else if(generation < 100) { genPath = basePath + "0" + generation + "/"; }
+		else { genPath = basePath + generation + "/"; }
 		
 		// Write out NNET files
 		for(int i=0; i < genomes.size(); i++) {
@@ -166,7 +162,7 @@ public class GeneticAlgorithm extends ApplicationAdapter {
 		
 		if( generation == TrainingParams.NumGenerations ) {
 			try {
-				String csvFileName = TrainingParams.runPath + "\\scores.csv";
+				String csvFileName = TrainingParams.GA_OutputPath + "/scores.csv";
 				File csvFile = new File(csvFileName);
 				
 				// Delete if currently exists, then create fresh file
@@ -204,7 +200,7 @@ public class GeneticAlgorithm extends ApplicationAdapter {
 	 * 
 	 * @return ArrayList of created Genomes.
 	 */
-	private ArrayList<Genome> generateInitialGenomePopulation() {
+	private ArrayList<Genome> generateRandomInitialGenomePopulation() {
 		ArrayList<Genome> GenomePopulation = new ArrayList<Genome>(TrainingParams.NumGenomes + 2);
 		
 		// Generate Random Weighted Neural Networks for First Generation
@@ -217,14 +213,18 @@ public class GeneticAlgorithm extends ApplicationAdapter {
 	}
 	
 	
-	private ArrayList<Genome> generateInitialGenomePopulation2(File startNNET) {
-		ArrayList<Genome> GenomePopulation = new ArrayList<Genome>(TrainingParams.NumGenomes + 2);
-		
-		for( int i = 0; i < TrainingParams.NumGenomes - 1; i++ ) {
-			GenomePopulation.add(mutateOnlyHelper2(new Genome(NeuralNetwork.createFromFile(startNNET))));
+	private ArrayList<Genome> generateInitialGenomePopulationFromNN(File startNNET) {
+		ArrayList<Genome> GenomePopulation = new ArrayList<Genome>(TrainingParams.NumGenomes);
+
+        // Add Base NN without modification
+        Genome base = new Genome(NeuralNetwork.createFromFile(startNNET));
+        GenomePopulation.add(base);
+
+        // Cross & Mutate a random NN with the Base
+		for( int i = 1; i < TrainingParams.NumGenomes; i += 2 ) {
+            GenomePopulation.addAll(crossoverAndMutateHelper(base, new Genome(ModifyNeuralNetwork.randomizeWeights(this.BaseNN, this.random))));
 		}
-		
-		GenomePopulation.add(new Genome(NeuralNetwork.createFromFile(startNNET)));		
+
 		
 		return GenomePopulation;
 	}
@@ -233,21 +233,21 @@ public class GeneticAlgorithm extends ApplicationAdapter {
 	/**
 	 * This method mutates children weights.
 	 * 
-	 * @param children
+	 * @param child
 	 */
-	private void mutateChildrenHelper(ArrayList<Double> children) {
+	private void mutateChildrenHelper(ArrayList<Double> child) {
 		if( !TrainingParams.PerformMutations ) {
 			return;
 		}
 		
-		int numMutations = (int)(TrainingParams.PercentMutations * children.size());
+		int numMutations = (int)(TrainingParams.PercentMutations * child.size());
 		
 		for(int i=0; i < numMutations; i++) {
 			// Get index to flip
-			int index = ((int)(this.random.nextDouble() * (children.size()-1)));
+			int index = ((int)(this.random.nextDouble() * (child.size()-1)));
 			
 			// Get range of change
-			Double weight = children.get(index);
+			Double weight = child.get(index);
 			double high = weight * (1 + TrainingParams.MaxPercentMutationChange);
 			double low  = weight * (1 - TrainingParams.MaxPercentMutationChange);
 			
@@ -256,15 +256,14 @@ public class GeneticAlgorithm extends ApplicationAdapter {
 			if( low  <= 0 ) { low  = 0.000000000001; }
 			
 			// Mutate
-			//Double mutWeight = new Double((this.random.nextDouble() * (high - low)) + low);
 			Double mutWeight = new Double( Math.abs(1 - ((this.random.nextDouble() * (high - low)) + low)) );
-			children.set(index, mutWeight);
+			child.set(index, mutWeight);
 		}
 	}
 	
 	
 	/**
-	 * A helper method to convert from Double to double
+	 * A helper method to convert from ArrayList<Double> to double[]
 	 * 
 	 * @param list
 	 * @return
@@ -281,130 +280,61 @@ public class GeneticAlgorithm extends ApplicationAdapter {
 	
 	
 	/**
-	 * This method takes two elite parents, mutates both, and returns 2 children.
-	 * 
+	 * This method takes two elite 'parents' and produces a two children through crossover and mutation. <br><br>
+	 *
 	 * @param alpha
 	 * @param beta
-	 * @return
-	 */
-	private ArrayList<Genome> mutateOnlyHelper(Genome alpha, Genome beta) {
-		ArrayList<Genome> children = new ArrayList<Genome>();
-		
-		// Collect parent weights to go to child
-		ArrayList<Double> childWeights1 = new ArrayList<Double>(Arrays.asList(alpha.getNN().getWeights()));
-		ArrayList<Double> childWeights2  = new ArrayList<Double>(Arrays.asList(beta.getNN().getWeights()));
-		
-		// Mutate Children
-		mutateChildrenHelper(childWeights1);
-		mutateChildrenHelper(childWeights2);
-		
-		// Store in new Genomes
-		Genome child1 = new Genome(ModifyNeuralNetwork.randomizeWeights(this.BaseNN, this.random));
-		child1.getNN().setWeights(doubleConverter(childWeights1));
-		children.add(child1);
-		
-		Genome child2 = new Genome(ModifyNeuralNetwork.randomizeWeights(this.BaseNN, this.random));
-		child2.getNN().setWeights(doubleConverter(childWeights2));
-		children.add(child2);
-		
-		return children;
-	}
-	
-	private Genome mutateOnlyHelper2(Genome alpha) {
-		ArrayList<Genome> children = new ArrayList<Genome>();
-		
-		// Collect parent weights to go to child
-		ArrayList<Double> childWeights1 = new ArrayList<Double>(Arrays.asList(alpha.getNN().getWeights()));
-		
-		// Mutate Children
-		mutateChildrenHelper(childWeights1);
-		
-		// Store in new Genomes
-		Genome child1 = new Genome(ModifyNeuralNetwork.randomizeWeights(this.BaseNN, this.random));
-		child1.getNN().setWeights(doubleConverter(childWeights1));
-		
-		return child1;
-	}
-	
-	
-	/**
-	 * This method takes two elite 'parents' and produces a set of children through crossover and mutation. <br><br>
-	 * 
-	 * <b>Crossover Algorithm</b> <br>
-	 * Assume 2 crossover points, which splits weights into 3 segments <br>
-	 * alphaWeights - ABC, betaWeights - XYZ <br> 
-	 * Then generate children by "injecting" weights from other parent into it. <br>
-	 * In this case, you would end up with: <br>
-	 * XBC, AYC, ABZ, AYZ, XBZ, XYC <br> <br>
-	 * This generates (2 * NumCrossovers) children.
-	 * 
-	 * @param alpha
-	 * @param beta
-	 * @return
+     *
+	 * @return A list containing two children.
 	 */
 	private ArrayList<Genome> crossoverAndMutateHelper(Genome alpha, Genome beta) {
-		ArrayList<Genome> children = new ArrayList<Genome>((TrainingParams.NumCrossovers * 2) + 2);
-		
 		// Collect Parent Weights
 		ArrayList<Double> alphaWeights = new ArrayList<Double>(Arrays.asList(alpha.getNN().getWeights()));
 		ArrayList<Double> betaWeights  = new ArrayList<Double>(Arrays.asList(beta.getNN().getWeights()));
+
+        // Create Children Weights
+        ArrayList<Genome> children = new ArrayList<Genome>();
+        ArrayList<Double> childWeights1 = new ArrayList<Double>();
+        ArrayList<Double> childWeights2 = new ArrayList<Double>();
+
+
+		// Collect random indexes to perform crossover at.
+		HashSet<Integer> pivotPoints = new HashSet<Integer>();
 		
-		/* 
-		 * Collect Random Pivot points for Crossover, 
-		 * making sure each segment will have at least 1 weight in it
-		 */
-		ArrayList<Integer> pivotPoints = new ArrayList<Integer>();
-		pivotPoints.add(0);
-		pivotPoints.add(alphaWeights.size());
-		
-		for(int i = 0; i < TrainingParams.NumCrossovers; i++) {
-			int pivot = (int)(alphaWeights.size() * this.random.nextDouble());
+		for(int i = 0; i < alphaWeights.size() * TrainingParams.CrossoverPercent; i++) {
+			int pivot = (int) Math.floor(alphaWeights.size() * (this.random.nextDouble() - .000001));
 			
-			if( pivot == 0 || 
-				pivot == alphaWeights.size() ||
-				pivotPoints.contains(new Integer(pivot)) ||
-				pivotPoints.contains(new Integer(pivot-1)) ||
-				pivotPoints.contains(new Integer(pivot+1)) ) {
-				i--;
-			} else {
-				pivotPoints.add(pivot);
-			}
+			pivotPoints.add(pivot);
 		}
-		
-		Collections.sort(pivotPoints);
-		
-		
-		/*
-		 * Perform crossover and mutation.  Each loop makes two children.
-		 */
-		for(int i=0; i < pivotPoints.size(); i++ ) {
-			// Splice beta into alpha, and vice versa
-			ArrayList<Double> childWeights1 = new ArrayList<Double>();
-			ArrayList<Double> childWeights2 = new ArrayList<Double>();
-			
-			for(int j=0; j < pivotPoints.size() - 1; j++) {
-				if( i == j ) {
-					childWeights1.addAll( betaWeights.subList(  pivotPoints.get(j), pivotPoints.get(j+1)) );
-					childWeights2.addAll( alphaWeights.subList( pivotPoints.get(j), pivotPoints.get(j+1)) );
-				} else {
-					childWeights1.addAll( alphaWeights.subList( pivotPoints.get(j), pivotPoints.get(j+1)) );
-					childWeights2.addAll( betaWeights.subList(  pivotPoints.get(j), pivotPoints.get(j+1)) );
-				}
-			}
-			
-			// Mutate Children
-			mutateChildrenHelper(childWeights1);
-			mutateChildrenHelper(childWeights2);
-			
-			// Store in new Genomes
-			Genome child1 = new Genome(ModifyNeuralNetwork.randomizeWeights(this.BaseNN, this.random));
-			child1.getNN().setWeights(doubleConverter(childWeights1));
-			children.add(child1);
-			
-			Genome child2 = new Genome(ModifyNeuralNetwork.randomizeWeights(this.BaseNN, this.random));
-			child2.getNN().setWeights(doubleConverter(childWeights2));
-			children.add(child2);
-		}
+
+
+        // Perform Crossover.  If at a pivot point, switch with elite parent gives to which child.
+        for(int i = 0; i < alphaWeights.size(); i++ ) {
+
+            if( pivotPoints.contains(i) && TrainingParams.PerformCrossovers ) {
+                childWeights1.add(new Double(betaWeights.get(i).doubleValue()));
+                childWeights2.add(new Double(alphaWeights.get(i).doubleValue()));
+            } else {
+                childWeights1.add(new Double(alphaWeights.get(i).doubleValue()));
+                childWeights2.add(new Double(betaWeights.get(i).doubleValue()));
+            }
+        }
+
+
+        // Mutate Children
+        mutateChildrenHelper(childWeights1);
+        mutateChildrenHelper(childWeights2);
+
+
+        // Store in new Genomes
+        Genome child1 = new Genome(ModifyNeuralNetwork.randomizeWeights(this.BaseNN, this.random));
+        child1.getNN().setWeights(doubleConverter(childWeights1));
+        children.add(child1);
+
+        Genome child2 = new Genome(ModifyNeuralNetwork.randomizeWeights(this.BaseNN, this.random));
+        child2.getNN().setWeights(doubleConverter(childWeights2));
+        children.add(child2);
+
 		
 		return children;
 	}
@@ -441,8 +371,7 @@ public class GeneticAlgorithm extends ApplicationAdapter {
 			Genome parent1 = currentGenomes.get(index1);
 			Genome parent2 = currentGenomes.get(index2);
 			
-			ArrayList<Genome> children = (TrainingParams.PerformCrossovers) ?  
-						crossoverAndMutateHelper(parent1, parent2) : mutateOnlyHelper(parent1, parent2);
+			ArrayList<Genome> children = crossoverAndMutateHelper(parent1, parent2);
 			
 			// Add children to newGenomes
 			for(int j = 0; j < children.size(); j++ ) {

@@ -20,12 +20,12 @@ public class FitnessWorkerThread implements Runnable {
 		this.score = 0;
 		this.random = new Random();
 		this.genome = genome;
-		
-		//testEnviro1 = new TestEnvironment(this.genome.getNN(), this.random, 1, 16, 16);	// Bottom Left
-		testEnviro2 = new TestEnvironment(this.genome.getNN(), this.random, 2, 784, 16);	// Bottom Right
-		testEnviro3 = new TestEnvironment(this.genome.getNN(), this.random, 3, 784, 1200);	// Top Right
-		testEnviro4 = new TestEnvironment(this.genome.getNN(), this.random, 4, 16, 1200);	// Top Left
-		testEnviro5 = new TestEnvironment(this.genome.getNN(), this.random, 5, 16, 16);		// Bottom Left
+
+        this.testEnviro1 = new TestEnvironment(this.genome.getNN(), this.random, 1, 16, 16);	// Bottom Left
+        this.testEnviro2 = new TestEnvironment(this.genome.getNN(), this.random, 2, 784, 16);	// Bottom Right
+        this.testEnviro3 = new TestEnvironment(this.genome.getNN(), this.random, 3, 784, 1200);	// Top Right
+        this.testEnviro4 = new TestEnvironment(this.genome.getNN(), this.random, 4, 16, 1200);	// Top Left
+        this.testEnviro5 = new TestEnvironment(this.genome.getNN(), this.random, 5, 16, 16);	// Bottom Left
 	}
 	
 	
@@ -53,7 +53,8 @@ public class FitnessWorkerThread implements Runnable {
 	}
 	
 	public long getScore() {
-		return this.score;
+		System.gc();
+        return this.score;
 	}
 
 	@Override
