@@ -5,7 +5,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import us.thirdmillenium.desktoptrainer.TrainingParams;
-import us.thirdmillenium.desktoptrainer.environment.NoGraphicsEnvironment;
 
 
 public class FitnessScorer implements TrainingParams {

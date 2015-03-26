@@ -2,6 +2,7 @@ package us.thirdmillenium.desktoptrainer.geneticalgorithm;
 
 import java.util.Random;
 
+import us.thirdmillenium.desktoptrainer.environment.Environment;
 import us.thirdmillenium.desktoptrainer.environment.TestEnvironment;
 
 
@@ -11,7 +12,7 @@ public class FitnessWorkerThread implements Runnable {
 	private long score;
 	private Random random;
 	private Genome genome;
-	private TestEnvironment testEnviro1, testEnviro2, testEnviro3, testEnviro4, testEnviro5;	
+	private Environment testEnviro1, testEnviro2, testEnviro3, testEnviro4, testEnviro5;
 	
 	
 	public FitnessWorkerThread(int index, Genome genome) {
@@ -29,21 +30,26 @@ public class FitnessWorkerThread implements Runnable {
 	
 	
 	@Override
-	public void run() {	
-		//this.score += testEnviro1.simulate();
-		//testEnviro1 = null;
-		
-		this.score += testEnviro2.simulate();
-		testEnviro2 = null;
-		
-		this.score += testEnviro3.simulate();
-		testEnviro3 = null;
-		
-		this.score += testEnviro4.simulate();
-		testEnviro4 = null;
-		
-		this.score += testEnviro5.simulate();
-		testEnviro5 = null;
+	public void run() {
+        this.testEnviro1.simulate();
+        this.score += this.testEnviro1.getScore();
+        this.testEnviro1 = null;
+
+        this.testEnviro2.simulate();
+		this.score += this.testEnviro2.getScore();
+		this.testEnviro2 = null;
+
+        this.testEnviro3.simulate();
+        this.score += this.testEnviro3.getScore();
+        this.testEnviro3 = null;
+
+        this.testEnviro4.simulate();
+        this.score += this.testEnviro4.getScore();
+        this.testEnviro4 = null;
+
+        this.testEnviro5.simulate();
+        this.score += this.testEnviro5.getScore();
+        this.testEnviro5 = null;
 	}
 	
 	public long getScore() {

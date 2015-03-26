@@ -4,11 +4,15 @@ import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 
 import us.thirdmillenium.desktoptrainer.environment.Environment;
+import us.thirdmillenium.desktoptrainer.environment.SinglePlayEnvironment;
 
 import java.util.Random;
 
 
 public class DesktopTrainer extends ApplicationAdapter {
+    // Test INdex
+    private int TestIndex = 3;
+
     // Environment
     private Environment MyEnvironment;
 
@@ -16,7 +20,7 @@ public class DesktopTrainer extends ApplicationAdapter {
     public void create () {
         Random random = new Random();
 
-        this.MyEnvironment = new Environment(TrainingParams.PathToBaseNN, random, 5);
+        this.MyEnvironment = new SinglePlayEnvironment(TrainingParams.PathToBaseNN, random, TestIndex);
     }
 
     @Override
