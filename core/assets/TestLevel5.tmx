@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.0" orientation="orthogonal" renderorder="right-down" width="25" height="38" tilewidth="32" tileheight="32" nextobjectid="89">
+ <tileset firstgid="1" name="Floor-Lvl1" tilewidth="32" tileheight="32">
+  <image source="tile1_32x32.png" width="32" height="32"/>
+ </tileset>
+ <tileset firstgid="2" name="Wall-Lvl1" tilewidth="32" tileheight="32">
+  <image source="wall_silver_32x32.png" width="32" height="32"/>
+  <tile id="0">
+   <properties>
+    <property name="blocked" value="1"/>
+   </properties>
+  </tile>
+ </tileset>
+ <tileset firstgid="3" name="blankTile" tilewidth="32" tileheight="32">
+  <image source="blankTile.png" trans="ff00ff" width="32" height="32"/>
+ </tileset>
+ <layer name="Floor-Layer" width="25" height="38">
+  <data encoding="base64" compression="zlib">
+   eJztwwEJAAAMBKH7/qWXY6DgqqmqqurTB6KhA7c=
+  </data>
+ </layer>
+ <layer name="Wall-Layer" width="25" height="38">
+  <data encoding="base64" compression="zlib">
+   eJztllEKACAIQyXvf+dOIJo6KdrHvkIfTRupiKih5ciq6xIZ8T5kkOH1ybxlry6aB1k/Tu84wcjkYGUfyMjPJ3pGYdSVHx378iOjklfobEd4cxNj4t/8oi9kkIFmbDSZCrY=
+  </data>
+ </layer>
+ <objectgroup name="Collision">
+  <object id="76" x="448" y="0" width="352" height="352"/>
+  <object id="77" x="224" y="0" width="224" height="32"/>
+  <object id="78" x="672" y="352" width="32" height="224"/>
+  <object id="79" x="576" y="544" width="96" height="32"/>
+  <object id="80" x="224" y="128" width="32" height="320"/>
+  <object id="81" x="256" y="416" width="128" height="32"/>
+  <object id="82" x="352" y="448" width="32" height="128"/>
+  <object id="83" x="384" y="544" width="96" height="32"/>
+  <object id="84" x="0" y="320" width="224" height="32"/>
+  <object id="85" x="352" y="672" width="352" height="128"/>
+  <object id="86" x="224" y="800" width="576" height="416"/>
+  <object id="88" x="64" y="928" width="160" height="288"/>
+ </objectgroup>
+</map>

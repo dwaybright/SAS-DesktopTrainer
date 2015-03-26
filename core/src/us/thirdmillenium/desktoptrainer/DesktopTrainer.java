@@ -2,26 +2,25 @@ package us.thirdmillenium.desktoptrainer;
 
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.graphics.GL20;
-import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+
+import us.thirdmillenium.desktoptrainer.environment.Environment;
+
+import java.util.Random;
+
 
 public class DesktopTrainer extends ApplicationAdapter {
-	SpriteBatch batch;
-	Texture img;
-	
-	@Override
-	public void create () {
-		batch = new SpriteBatch();
-		img = new Texture("core/assets/badlogic.jpg");
-	}
+    // Environment
+    private Environment MyEnvironment;
 
-	@Override
-	public void render () {
-		Gdx.gl.glClearColor(1, 0, 0, 1);
-		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-		batch.begin();
-		batch.draw(img, 0, 0);
-		batch.end();
-	}
+    @Override
+    public void create () {
+        Random random = new Random();
+
+        this.MyEnvironment = new Environment(TrainingParams.PathToBaseNN, random, 5);
+    }
+
+    @Override
+    public void render () {
+        this.MyEnvironment.render(Gdx.graphics.getDeltaTime());
+    }
 }
