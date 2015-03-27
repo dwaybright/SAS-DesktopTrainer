@@ -65,8 +65,7 @@ public class PuppetAgent extends AgentModel {
     private HashSet<TileNode> currPathNodeTracker;
     private GraphPath<TileNode> CurrentPath;
     private int CurrentPathIndex;
-    private float Pixel_X;
-    private float Pixel_Y;
+    private Vector2 position;
     private int Cell_X;
     private int Cell_Y;
     private float Angle;
@@ -74,8 +73,6 @@ public class PuppetAgent extends AgentModel {
 
     // Agent Physical Attributes
     private int Health;
-    private float MovementSpeed;
-    private float MovementSpeedScalar;
     private float Eyesight;
     private float Hearing;
 
@@ -106,20 +103,17 @@ public class PuppetAgent extends AgentModel {
         this.shooters = shooters;
 
         // Setup Graphics
-        this.Alive = new Texture("goodGuyDotArrow.png");
-        this.Dead = new Texture("deadDot.png");
+        this.Alive = new Texture(TrainingParams.TrainingAgentLivePNG);
+        this.Dead = new Texture(TrainingParams.DeadAgentPNG);
         this.Sprite = new Sprite(Alive);
 
         // Setup Start Location
         this.CurrentPathIndex = -1;
-        this.Pixel_X = pixelX;
-        this.Pixel_Y = pixelY;
+        this.position = new Vector2(pixelX, pixelY);
         this.Angle = 270;
 
         // Set Basic Values
         this.Health = 50;
-        this.MovementSpeed = 50;
-        this.MovementSpeedScalar = (float) (TrainingParams.AgentMaxMovement / TrainingParams.FramesPerSecond);
         this.Eyesight = 10;
         this.Hearing = 20;
         
@@ -172,7 +166,7 @@ public class PuppetAgent extends AgentModel {
     }
 
     @Override
-    public void updateAgentState() {
+    public void updateAgentState(float deltaTime) {
         // Bounds Check - Do nothing
         if( this.CurrentPath == null) {
             return;
@@ -184,8 +178,6 @@ public class PuppetAgent extends AgentModel {
         
         this.agentShoot = 0;
         
-        float oldAngle = this.Angle;
-        
         // First, calculate inputs
         double[] timeStepData = calculateTrainingInputs();  
         
@@ -193,13 +185,13 @@ public class PuppetAgent extends AgentModel {
         TileNode tempTile = this.CurrentPath.get(this.CurrentPathIndex);
 
         // Calculate pixel distance between positions
-        Vector2 currentPosition = new Vector2(this.Pixel_X, this.Pixel_Y);
+        Vector2 currentPosition = this.position.cpy();
         Vector2 nextPosition = tempTile.getPixelVector2();
 
         float distance = currentPosition.dst2(nextPosition);
 
         // Make sure to move as far as possible
-        if( distance < this.MovementSpeed ) {
+        if( distance < (TrainingParams.AgentMaxMovement * TrainingParams.AgentMaxMovement) ) {
 
             if( this.CurrentPathIndex + 1 < this.CurrentPath.getCount() ) {
                 this.CurrentPathIndex++;
@@ -207,9 +199,8 @@ public class PuppetAgent extends AgentModel {
                 nextPosition = tempTile.getPixelVector2();
             } else {
                 // We have arrived!
-                this.Pixel_X = nextPosition.x;
-                this.Pixel_Y = nextPosition.y;
-                this.Sprite.setPosition(this.Pixel_X, this.Pixel_Y);
+                this.position.set(nextPosition.x, nextPosition.y);
+                this.Sprite.setCenter(nextPosition.x, nextPosition.y);
 
                 // Clear Path
                 this.CurrentPath = null;
@@ -223,39 +214,44 @@ public class PuppetAgent extends AgentModel {
         }
 
         
-        // Update Position
-        Vector2 unitVec = new Vector2(0,1);
-        Vector2 direction = nextPosition.sub(currentPosition).nor();
-        direction.mulAdd(direction, this.MovementSpeedScalar);
-        
-        float currentAngle = this.Angle;
-        float wantedAngleChange = unitVec.angle(direction);
-        
-        this.deltaAngle = currentAngle - wantedAngleChange;
-        
-        if( this.deltaAngle <= 0 ) {
-        	this.deltaAngle = 360 + this.deltaAngle;
-        	
-        } else if( this.deltaAngle >= 180 ) {
-        	this.deltaAngle = 360 - this.deltaAngle;
-        	
-        	if( this.deltaAngle > TrainingParams.AgentMaxTurnAngle ) {
-        		this.deltaAngle = TrainingParams.AgentMaxTurnAngle;
-        	}
+        // Collect angle information from direction
+        Vector2 direction = nextPosition.cpy().sub(currentPosition).nor();
+
+        float desiredAngle = direction.angle() - 90;                                // The angle the sprite should be pointing (90 deg shift)
+        desiredAngle = (desiredAngle < 0) ? 360 + desiredAngle : desiredAngle;      // Bring back to 0 - 360
+
+        float wantedAngleChange = desiredAngle - this.Angle;                        // How much angle needs to be added between current angle and desired angle.
+
+        // Rotate in shortest direction
+        if( wantedAngleChange >= 180 ) {
+            wantedAngleChange -= 360;
+        } else if( wantedAngleChange <= -180) {
+            wantedAngleChange += 360;
         }
 
-        this.Pixel_X += direction.x;
-        this.Pixel_Y += direction.y;
-        this.Sprite.setPosition(this.Pixel_X, this.Pixel_Y);
-        //float myAngleChange = direction.angle(new Vector2(this.Pixel_X, this.Pixel_Y));
+        this.deltaAngle = wantedAngleChange;
 
-        // Update Rotation        
-        //float directionAngle = unitVec.angle(direction);
-        
+        // Check that turn is legal (i.e. within Max Turn Per Frame)
+        if( Math.abs(this.deltaAngle) > TrainingParams.AgentMaxTurnAngle ) {
+            this.deltaAngle = this.deltaAngle > 0 ? TrainingParams.AgentMaxTurnAngle : -TrainingParams.AgentMaxTurnAngle;
+        }
+
+
+        // Update Position
+        this.position.x += direction.x * TrainingParams.AgentMaxMovement;
+        this.position.y += direction.y * TrainingParams.AgentMaxMovement;
+        this.Sprite.setCenter(this.position.x, this.position.y);
+
+        // Update Rotation
         this.Angle += this.deltaAngle;
-        
+
+        // Keep between 0 and 360 (sanity purposes)
+        if( this.Angle > 360)  { this.Angle -= 360; }
+        else if( this.Angle < 0 ) { this.Angle += 360; }
+
         this.Sprite.setRotation( this.Angle );
-        
+
+        // Tack on Training Outputs from observed change
         calculateTrainingOutputs(timeStepData, 52);
         
         // Finally, store snapshot of this time step for training
@@ -264,8 +260,6 @@ public class PuppetAgent extends AgentModel {
 
     @Override
     public void drawAgent(SpriteBatch sb) {
-        updateAgentState();
-
         this.Sprite.draw(sb);
     }
 
@@ -283,173 +277,33 @@ public class PuppetAgent extends AgentModel {
     
     
     private void calculateTrainingOutputs(double[] timeStepData, int startIndex) {
-    	int neg = 1;
-    	
-    	if( Math.abs(this.deltaAngle) < 5 ) {
-    		// Compute Movement Rotation
-    		if( this.deltaAngle < 0 ) {
-    			timeStepData[startIndex + 0] = .01;	// 100% Counter-Clockwise
-        		timeStepData[startIndex + 1] = .01;	//  66% Counter-Clockwise
-        		timeStepData[startIndex + 2] = .10;	//  33% Counter-Clockwise
-        		timeStepData[startIndex + 3] = .90;	//   No Rotation
-        		timeStepData[startIndex + 4] = .40;	//  33% Clockwise
-        		timeStepData[startIndex + 5] = .01;	//  66% Clockwise
-        		timeStepData[startIndex + 6] = .01;	// 100% Clockwise        		
-    		} else {
-    			timeStepData[startIndex + 0] = .01;	// 100% Counter-Clockwise
-        		timeStepData[startIndex + 1] = .01;	//  66% Counter-Clockwise
-        		timeStepData[startIndex + 2] = .40;	//  33% Counter-Clockwise
-        		timeStepData[startIndex + 3] = .90;	//   No Rotation
-        		timeStepData[startIndex + 4] = .10;	//  33% Clockwise
-        		timeStepData[startIndex + 5] = .01;	//  66% Clockwise
-        		timeStepData[startIndex + 6] = .01;	// 100% Clockwise
-    		}
-    		
-    		// Compute Velocity Change
-    		timeStepData[startIndex + 14] = .01;	// -80% Run Backwards
-    		timeStepData[startIndex + 15] = .01;	// -50% Jog Backwards
-    		timeStepData[startIndex + 16] = .01;	// -10% Creep Backwards
-    		timeStepData[startIndex + 17] = .20;	//   No Movement
-    		timeStepData[startIndex + 18] = .60;	//  20% Creep Forward
-    		timeStepData[startIndex + 19] = .80;	//  60% Jog Forward
-    		timeStepData[startIndex + 20] = .80;	// 100% Run Forward
-    		
-    	} else if( Math.abs(this.deltaAngle) < 10 ) {
-    		if( this.deltaAngle < 0 ) {
-    			timeStepData[startIndex + 0] = .01;	// 100% Counter-Clockwise
-        		timeStepData[startIndex + 1] = .01;	//  66% Counter-Clockwise
-        		timeStepData[startIndex + 2] = .01;	//  33% Counter-Clockwise
-        		timeStepData[startIndex + 3] = .50;	//   No Rotation
-        		timeStepData[startIndex + 4] = .80;	//  33% Clockwise
-        		timeStepData[startIndex + 5] = .10;	//  66% Clockwise
-        		timeStepData[startIndex + 6] = .01;	// 100% Clockwise
-    		} else {
-    			timeStepData[startIndex + 0] = .01;	// 100% Counter-Clockwise
-        		timeStepData[startIndex + 1] = .10;	//  66% Counter-Clockwise
-        		timeStepData[startIndex + 2] = .80;	//  33% Counter-Clockwise
-        		timeStepData[startIndex + 3] = .50;	//   No Rotation
-        		timeStepData[startIndex + 4] = .01;	//  33% Clockwise
-        		timeStepData[startIndex + 5] = .01;	//  66% Clockwise
-        		timeStepData[startIndex + 6] = .01;	// 100% Clockwise
-    		}
-    		
-    		// Compute Velocity Change
-    		timeStepData[startIndex + 14] = .01;	// -80% Run Backwards
-    		timeStepData[startIndex + 15] = .01;	// -50% Jog Backwards
-    		timeStepData[startIndex + 16] = .01;	// -10% Creep Backwards
-    		timeStepData[startIndex + 17] = .20;	//   No Movement
-    		timeStepData[startIndex + 18] = .60;	//  20% Creep Forward
-    		timeStepData[startIndex + 19] = .90;	//  60% Jog Forward
-    		timeStepData[startIndex + 20] = .50;	// 100% Run Forward
-    	} else if( Math.abs(this.deltaAngle) < 15 ) {
-    		if( this.deltaAngle < 0 ) {
-    			timeStepData[startIndex + 0] = .01;	// 100% Counter-Clockwise
-        		timeStepData[startIndex + 1] = .01;	//  66% Counter-Clockwise
-        		timeStepData[startIndex + 2] = .01;	//  33% Counter-Clockwise
-        		timeStepData[startIndex + 3] = .20;	//   No Rotation
-        		timeStepData[startIndex + 4] = .90;	//  33% Clockwise
-        		timeStepData[startIndex + 5] = .50;	//  66% Clockwise
-        		timeStepData[startIndex + 6] = .01;	// 100% Clockwise
-    		} else {
-    			timeStepData[startIndex + 0] = .01;	// 100% Counter-Clockwise
-        		timeStepData[startIndex + 1] = .50;	//  66% Counter-Clockwise
-        		timeStepData[startIndex + 2] = .90;	//  33% Counter-Clockwise
-        		timeStepData[startIndex + 3] = .20;	//   No Rotation
-        		timeStepData[startIndex + 4] = .01;	//  33% Clockwise
-        		timeStepData[startIndex + 5] = .01;	//  66% Clockwise
-        		timeStepData[startIndex + 6] = .01;	// 100% Clockwise
-    		}
-    		
-    		// Compute Velocity Change
-    		timeStepData[startIndex + 14] = .01;	// -80% Run Backwards
-    		timeStepData[startIndex + 15] = .01;	// -50% Jog Backwards
-    		timeStepData[startIndex + 16] = .20;	// -10% Creep Backwards
-    		timeStepData[startIndex + 17] = .50;	//   No Movement
-    		timeStepData[startIndex + 18] = .80;	//  20% Creep Forward
-    		timeStepData[startIndex + 19] = .90;	//  60% Jog Forward
-    		timeStepData[startIndex + 20] = .10;	// 100% Run Forward
-    	} else if( Math.abs(this.deltaAngle) < 20 ) {
-    		if( this.deltaAngle < 0 ) {
-    			timeStepData[startIndex + 0] = .01;	// 100% Counter-Clockwise
-        		timeStepData[startIndex + 1] = .01;	//  66% Counter-Clockwise
-        		timeStepData[startIndex + 2] = .01;	//  33% Counter-Clockwise
-        		timeStepData[startIndex + 3] = .01;	//   No Rotation
-        		timeStepData[startIndex + 4] = .5;	//  33% Clockwise
-        		timeStepData[startIndex + 5] = .9;	//  66% Clockwise
-        		timeStepData[startIndex + 6] = .2;	// 100% Clockwise
-    		} else {
-    			timeStepData[startIndex + 0] = .2;	// 100% Counter-Clockwise
-        		timeStepData[startIndex + 1] = .9;	//  66% Counter-Clockwise
-        		timeStepData[startIndex + 2] = .5;	//  33% Counter-Clockwise
-        		timeStepData[startIndex + 3] = .01;	//   No Rotation
-        		timeStepData[startIndex + 4] = .01;	//  33% Clockwise
-        		timeStepData[startIndex + 5] = .01;	//  66% Clockwise
-        		timeStepData[startIndex + 6] = .01;	// 100% Clockwise
-    		}
-    		
-    		// Compute Velocity Change
-    		timeStepData[startIndex + 14] = .01;	// -80% Run Backwards
-    		timeStepData[startIndex + 15] = .20;	// -50% Jog Backwards
-    		timeStepData[startIndex + 16] = .30;	// -10% Creep Backwards
-    		timeStepData[startIndex + 17] = .60;	//   No Movement
-    		timeStepData[startIndex + 18] = .90;	//  20% Creep Forward
-    		timeStepData[startIndex + 19] = .65;	//  60% Jog Forward
-    		timeStepData[startIndex + 20] = .10;	// 100% Run Forward
-    	} else if( Math.abs(this.deltaAngle) < 25 ) {
-    		if( this.deltaAngle < 0 ) {
-    			timeStepData[startIndex + 0] = .01;	// 100% Counter-Clockwise
-        		timeStepData[startIndex + 1] = .01;	//  66% Counter-Clockwise
-        		timeStepData[startIndex + 2] = .01;	//  33% Counter-Clockwise
-        		timeStepData[startIndex + 3] = .01;	//   No Rotation
-        		timeStepData[startIndex + 4] = .1;	//  33% Clockwise
-        		timeStepData[startIndex + 5] = .5;	//  66% Clockwise
-        		timeStepData[startIndex + 6] = .9;	// 100% Clockwise
-    		} else {
-    			timeStepData[startIndex + 0] = .9;	// 100% Counter-Clockwise
-        		timeStepData[startIndex + 1] = .5;	//  66% Counter-Clockwise
-        		timeStepData[startIndex + 2] = .1;	//  33% Counter-Clockwise
-        		timeStepData[startIndex + 3] = .01;	//   No Rotation
-        		timeStepData[startIndex + 4] = .01;	//  33% Clockwise
-        		timeStepData[startIndex + 5] = .01;	//  66% Clockwise
-        		timeStepData[startIndex + 6] = .01;	// 100% Clockwise
-    		}
-    		
-    		// Compute Velocity Change
-    		timeStepData[startIndex + 14] = .01;	// -80% Run Backwards
-    		timeStepData[startIndex + 15] = .20;	// -50% Jog Backwards
-    		timeStepData[startIndex + 16] = .30;	// -10% Creep Backwards
-    		timeStepData[startIndex + 17] = .60;	//   No Movement
-    		timeStepData[startIndex + 18] = .90;	//  20% Creep Forward
-    		timeStepData[startIndex + 19] = .40;	//  60% Jog Forward
-    		timeStepData[startIndex + 20] = .10;	// 100% Run Forward
-    	} else {
-    		if( this.deltaAngle < 0 ) {
-    			timeStepData[startIndex + 0] = .01;	// 100% Counter-Clockwise
-        		timeStepData[startIndex + 1] = .01;	//  66% Counter-Clockwise
-        		timeStepData[startIndex + 2] = .01;	//  33% Counter-Clockwise
-        		timeStepData[startIndex + 3] = .01;	//   No Rotation
-        		timeStepData[startIndex + 4] = .01;	//  33% Clockwise
-        		timeStepData[startIndex + 5] = .10;	//  66% Clockwise
-        		timeStepData[startIndex + 6] = .99;	// 100% Clockwise
-    		} else {
-    			timeStepData[startIndex + 0] = .99;	// 100% Counter-Clockwise
-        		timeStepData[startIndex + 1] = .10;	//  66% Counter-Clockwise
-        		timeStepData[startIndex + 2] = .01;	//  33% Counter-Clockwise
-        		timeStepData[startIndex + 3] = .01;	//   No Rotation
-        		timeStepData[startIndex + 4] = .01;	//  33% Clockwise
-        		timeStepData[startIndex + 5] = .01;	//  66% Clockwise
-        		timeStepData[startIndex + 6] = .01;	// 100% Clockwise
-    		}
-    		
-    		// Compute Velocity Change
-    		timeStepData[startIndex + 14] = .90;	// -80% Run Backwards
-    		timeStepData[startIndex + 15] = .50;	// -50% Jog Backwards
-    		timeStepData[startIndex + 16] = .20;	// -10% Creep Backwards
-    		timeStepData[startIndex + 17] = .01;	//   No Movement
-    		timeStepData[startIndex + 18] = .01;	//  20% Creep Forward
-    		timeStepData[startIndex + 19] = .01;	//  60% Jog Forward
-    		timeStepData[startIndex + 20] = .01;	// 100% Run Forward
-    	}
+        float normAngle = this.deltaAngle / TrainingParams.AgentMaxTurnAngle;
+
+        // Compute Rotation Change
+        timeStepData[startIndex + 0] = Math.max(-1f, Math.min(1f, normAngle * 0.10f * TrainingParams.AgentRotationModArray[0]));    // 100% Counter-Clockwise
+        timeStepData[startIndex + 1] = Math.max(-1f, Math.min(1f, normAngle * 0.15f * TrainingParams.AgentRotationModArray[1]));    //  66% Counter-Clockwise
+        timeStepData[startIndex + 2] = Math.max(-1f, Math.min(1f, normAngle * 0.25f * TrainingParams.AgentRotationModArray[2]));    //  33% Counter-Clockwise
+        timeStepData[startIndex + 3] = Math.max(-1f, Math.min(1f, normAngle * 0.90f * TrainingParams.AgentRotationModArray[3]));    //   No Rotation
+        timeStepData[startIndex + 4] = Math.max(-1f, Math.min(1f, normAngle * 0.80f * TrainingParams.AgentRotationModArray[4]));    //  33% Clockwise
+        timeStepData[startIndex + 5] = Math.max(-1f, Math.min(1f, normAngle * 0.70f * TrainingParams.AgentRotationModArray[5]));    //  66% Clockwise
+        timeStepData[startIndex + 6] = Math.max(-1f, Math.min(1f, normAngle * 0.50f * TrainingParams.AgentRotationModArray[6]));    // 100% Clockwise
+
+        // Compute Velocity Change
+        timeStepData[startIndex + 14] = Math.max(-1f, Math.min(1f, (0.9f - Math.abs(normAngle)) * TrainingParams.AgentVelocityModArray[0] * 0.40f));	// -80% Run Backwards
+        timeStepData[startIndex + 15] = Math.max(-1f, Math.min(1f, (0.9f - Math.abs(normAngle)) * TrainingParams.AgentVelocityModArray[1] * 0.50f));	// -50% Jog Backwards
+        timeStepData[startIndex + 16] = Math.max(-1f, Math.min(1f, (0.9f - Math.abs(normAngle)) * TrainingParams.AgentVelocityModArray[2] * 0.60f));	// -10% Creep Backwards
+        timeStepData[startIndex + 17] = Math.max(-1f, Math.min(1f, (0.9f - Math.abs(normAngle)) * TrainingParams.AgentVelocityModArray[3] * 0.85f));	//   No Movement
+        timeStepData[startIndex + 18] = Math.max(-1f, Math.min(1f, (0.9f - Math.abs(normAngle)) * TrainingParams.AgentVelocityModArray[4] * 0.95f));	//  20% Creep Forward
+        timeStepData[startIndex + 19] = Math.max(-1f, Math.min(1f, (0.9f - Math.abs(normAngle)) * TrainingParams.AgentVelocityModArray[5] * 1.00f));	//  60% Jog Forward
+        timeStepData[startIndex + 20] = Math.max(-1f, Math.min(1f, (0.9f - Math.abs(normAngle)) * TrainingParams.AgentVelocityModArray[6] * 1.00f));	// 100% Run Forward
+
+//        timeStepData[startIndex + 14] = 2 * Math.min(1, 1.05 - Math.abs(normAngle)) * TrainingParams.AgentVelocityModArray[0];	// -80% Run Backwards
+//        timeStepData[startIndex + 15] = 2 * Math.min(1, 1.05 - Math.abs(normAngle)) * TrainingParams.AgentVelocityModArray[1];	// -50% Jog Backwards
+//        timeStepData[startIndex + 16] = 2 * Math.min(1, 1.05 - Math.abs(normAngle)) * TrainingParams.AgentVelocityModArray[2];	// -10% Creep Backwards
+//        timeStepData[startIndex + 17] = 2 * Math.min(1, 1.05 - Math.abs(normAngle)) * TrainingParams.AgentVelocityModArray[3];	//   No Movement
+//        timeStepData[startIndex + 18] = 2 * Math.min(1, 1.05 - Math.abs(normAngle)) * TrainingParams.AgentVelocityModArray[4];	//  20% Creep Forward
+//        timeStepData[startIndex + 19] = 2 * Math.min(1, 1.05 - Math.abs(normAngle)) * TrainingParams.AgentVelocityModArray[5];	//  60% Jog Forward
+//        timeStepData[startIndex + 20] = 2 * Math.min(1, 1.05 - Math.abs(normAngle)) * TrainingParams.AgentVelocityModArray[6];	// 100% Run Forward
     	
     	// Compute Gun Movement?  Hard!!!
     	
@@ -461,9 +315,19 @@ public class PuppetAgent extends AgentModel {
     
     private double[] calculateTrainingInputs() {
     	double[] timeStepData = new double[74];
-    	Vector2 position = new Vector2(this.Pixel_X, this.Pixel_Y);
         
-        timeStepData[0] = (double) (this.Angle / 360);
+        //timeStepData[0] =(double)( Math.abs(this.Angle) > 360 ? (this.Angle / 360) : (this.Angle / 360) );
+
+        if( this.Angle > 360 ) {
+            timeStepData[0] = (double) ( (this.Angle - 360) / 360 );
+        } else if( this.Angle < -360 ) {
+            timeStepData[0] = (double) ( (this.Angle + 720) / 360 );
+        } else if( this.Angle < 0 ) {
+            timeStepData[0] = (double) ( (this.Angle + 360) / 360 );
+        } else {
+            timeStepData[0] = (double) ( this.Angle / 360 );
+        }
+
         
         // Angle to Bullets within 3 tiles (Max of 2)
  		int count = 1;
@@ -486,8 +350,8 @@ public class PuppetAgent extends AgentModel {
  		timeStepData[2] = (count > 2) ? timeStepData[2] : 1;
  		
  		// Feed in the 7x7 array of values
- 		int cellX = (int)(position.x / TrainingParams.MapTileSize);
-     	int cellY = (int)(position.y / TrainingParams.MapTileSize);
+ 		int cellX = (int)(this.position.x / TrainingParams.MapTileSize);
+     	int cellY = (int)(this.position.y / TrainingParams.MapTileSize);
      	
  		int currentCellIndex = (cellX * TrainingParams.NumCellsY) + cellY;
      	int gridYCount = 0;
@@ -565,10 +429,10 @@ public class PuppetAgent extends AgentModel {
      */
     public void setPathToGoal(float goalX, float goalY) {
         // Reset Index Tracker
-        this.CurrentPathIndex = 0;
+        this.CurrentPathIndex = 1;
 
         // Start and Goal node
-        TileNode startNode = GraphicsHelpers.findTileNodeByPixelLocation((int)this.Pixel_X, (int)this.Pixel_Y, this.MapNodes);
+        TileNode startNode = GraphicsHelpers.findTileNodeByPixelLocation((int)this.position.x, (int)this.position.y, this.MapNodes);
         TileNode endNode   = GraphicsHelpers.findTileNodeByPixelLocation((int)goalX, (int)goalY, this.MapNodes);
 
         // The returned path once computed

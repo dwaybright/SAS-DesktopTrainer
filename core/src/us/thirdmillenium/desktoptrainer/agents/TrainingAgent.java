@@ -109,7 +109,7 @@ public class TrainingAgent {
 		
 		// Setup Movement Score Tracking
 		this.score = 0;
-		this.currentCellIndex = GraphicsHelpers.getCurrentCellIndex(PixelX, PixelY);
+		this.currentCellIndex = -1; //GraphicsHelpers.getCurrentCellIndex(PixelX, PixelY);
 	}
 	
 	
@@ -247,6 +247,16 @@ public class TrainingAgent {
 		// Debug
 		//if( ++this.counter % 1000 == 0 ) { System.out.println("Counter = " + this.counter + " Score: " + this.score); }
 	}
+
+    private float sumArray(double[] vec) {
+        float weight = 0;
+
+        for( int i =0; i < vec.length; i++) {
+            weight += vec[i];
+        }
+
+        return weight;
+    }
 	
 	
 	/**
@@ -258,19 +268,23 @@ public class TrainingAgent {
 	 */
 	private void updatePosition(double[] rotation, double[] velocity, float deltaTime) {
 		// Collect how many degrees to adjust the current rotation, and adjust sprite
-		float deltaRot = getWeightedChange(rotation, TrainingParams.AgentRotationModArray) * TrainingParams.AgentMaxTurnAngle;
-		this.rotation += getWeightedChange(rotation, TrainingParams.AgentRotationModArray) * TrainingParams.AgentMaxTurnAngle;
-		
-		if(this.rotation < 0   ) { this.rotation = 360 + this.rotation; }
-		if(this.rotation > 360 ) { this.rotation = this.rotation - 360; }
+		//float deltaRot = getWeightedChange(rotation, TrainingParams.AgentRotationModArray) * TrainingParams.AgentMaxTurnAngle;
+		//this.rotation += getWeightedChange(rotation, TrainingParams.AgentRotationModArray) * TrainingParams.AgentMaxTurnAngle;
+
+        float angleChange = Math.max(-1, Math.min(1, sumArray(rotation))) * TrainingParams.AgentMaxTurnAngle;
+        this.rotation += angleChange;
+
+		if(this.rotation < 0   ) { this.rotation += 360; }
+		if(this.rotation > 360 ) { this.rotation -= 360; }
 		
 		this.sprite.setRotation(this.rotation);
 		
 		// Collect wanted velocity, then change position accordingly
-		float agentMovement = getWeightedChange(velocity, TrainingParams.AgentVelocityModArray) * TrainingParams.AgentMaxMovement;
+		//float agentMovement = getWeightedChange(velocity, TrainingParams.AgentVelocityModArray) * TrainingParams.AgentMaxMovement;
+
+        float agentMovement = Math.max(-1, Math.min(1, sumArray(velocity))) * TrainingParams.AgentMaxMovement;
 		
-		
-		Vector2 newPosition = this.position.mulAdd((new Vector2(0,1)).rotate(this.rotation), agentMovement);
+		Vector2 newPosition = this.position.cpy().mulAdd((new Vector2(0,1)).rotate(this.rotation), agentMovement);
 		
 		//unitVec.mulAdd(new Vector2(0,1), agentMovement);
 		//this.sprite.setPosition(newPosition.x, newPosition.y);

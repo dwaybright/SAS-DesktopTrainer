@@ -30,7 +30,7 @@ public abstract class AgentModel {
 
     public abstract void agentHit();
 
-    public abstract void updateAgentState();
+    public abstract void updateAgentState(float deltaTime);
 
     public abstract void drawAgent(SpriteBatch sb);
 
