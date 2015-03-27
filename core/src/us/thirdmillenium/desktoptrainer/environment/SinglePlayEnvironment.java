@@ -59,8 +59,8 @@ public class SinglePlayEnvironment extends Environment implements InputProcessor
     private boolean DEBUG = true;
     private boolean DRAW = true;
     
-    private boolean PUPPET = false;
-    private boolean NNET = true;
+    private boolean PUPPET = true;
+    private boolean NNET = false;
     //private float lastAngle = 0;
     
     // Bullet Tracker
@@ -245,7 +245,7 @@ public class SinglePlayEnvironment extends Environment implements InputProcessor
         this.SpriteBatchRenderer.begin();
         
         if( PUPPET ) {
-        	this.puppet.updateAgentState();
+        	this.puppet.updateAgentState(deltaTime);
         	this.puppet.drawAgent(this.SpriteBatchRenderer);
         }
 
