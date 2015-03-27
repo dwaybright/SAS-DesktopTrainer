@@ -222,7 +222,10 @@ public class GeneticAlgorithm extends ApplicationAdapter {
 
         // Cross & Mutate a random NN with the Base
 		for( int i = 1; i < TrainingParams.NumGenomes; i += 2 ) {
-            GenomePopulation.addAll(crossoverAndMutateHelper(base, new Genome(ModifyNeuralNetwork.randomizeWeights(this.BaseNN, this.random))));
+            Genome rando = new Genome(NeuralNetwork.createFromFile(startNNET));
+            rando.getNN().randomizeWeights(-0.99, 0.99);
+
+            GenomePopulation.addAll(crossoverAndMutateHelper(base, rando));
 		}
 
 		
@@ -248,16 +251,21 @@ public class GeneticAlgorithm extends ApplicationAdapter {
 			
 			// Get range of change
 			Double weight = child.get(index);
-			double high = weight * (1 + TrainingParams.MaxPercentMutationChange);
-			double low  = weight * (1 - TrainingParams.MaxPercentMutationChange);
+
+			double high = weight * (1 + TrainingParams.MaxPercentMutationChange);  // 1.10 * weight
+			double low  = weight * (1 - TrainingParams.MaxPercentMutationChange);  // 0.90 * weight
+
+            double mutWeight = weight >= 0 ? new Double( (this.random.nextDouble() * (high - low)) + low ) :
+                                             new Double( (this.random.nextDouble() * (low - high)) + high );
 			
 			// Check ranges (Keep between 0 and 1)
-			if( high >= 1 ) { high = 0.999999999999; }
-			if( low  <= 0 ) { low  = 0.000000000001; }
-			
+			//if( mutWeight >=  1 ) { mutWeight =  0.999999999999; }
+			//if( mutWeight <= -1 ) { mutWeight = -0.999999999999; }
+
 			// Mutate
-			Double mutWeight = new Double( Math.abs(1 - ((this.random.nextDouble() * (high - low)) + low)) );
-			child.set(index, mutWeight);
+			//Double mutWeight = new Double( Math.abs(1 - ((this.random.nextDouble() * (high - low)) + low)) );
+
+            child.set(index, mutWeight);
 		}
 	}
 	

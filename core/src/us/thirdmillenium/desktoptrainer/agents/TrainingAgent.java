@@ -271,10 +271,11 @@ public class TrainingAgent {
 		//float deltaRot = getWeightedChange(rotation, TrainingParams.AgentRotationModArray) * TrainingParams.AgentMaxTurnAngle;
 		//this.rotation += getWeightedChange(rotation, TrainingParams.AgentRotationModArray) * TrainingParams.AgentMaxTurnAngle;
 
-        this.rotation += Math.max(-1, Math.min(1, sumArray(rotation))) * TrainingParams.AgentMaxTurnAngle;
+        float angleChange = Math.max(-1, Math.min(1, sumArray(rotation))) * TrainingParams.AgentMaxTurnAngle;
+        this.rotation += angleChange;
 
-		if(this.rotation < 0   ) { this.rotation = 360 + this.rotation; }
-		if(this.rotation > 360 ) { this.rotation = this.rotation - 360; }
+		if(this.rotation < 0   ) { this.rotation += 360; }
+		if(this.rotation > 360 ) { this.rotation -= 360; }
 		
 		this.sprite.setRotation(this.rotation);
 		
@@ -283,7 +284,7 @@ public class TrainingAgent {
 
         float agentMovement = Math.max(-1, Math.min(1, sumArray(velocity))) * TrainingParams.AgentMaxMovement;
 		
-		Vector2 newPosition = this.position.mulAdd((new Vector2(0,1)).rotate(this.rotation), agentMovement);
+		Vector2 newPosition = this.position.cpy().mulAdd((new Vector2(0,1)).rotate(this.rotation), agentMovement);
 		
 		//unitVec.mulAdd(new Vector2(0,1), agentMovement);
 		//this.sprite.setPosition(newPosition.x, newPosition.y);

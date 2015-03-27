@@ -53,7 +53,7 @@ public class FitnessWorkerThread implements Runnable {
 	}
 	
 	public long getScore() {
-		System.gc();
+		//System.gc();
         return this.score;
 	}
 

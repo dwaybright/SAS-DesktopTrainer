@@ -24,45 +24,48 @@ import us.thirdmillenium.desktoptrainer.geneticalgorithm.GeneticAlgorithm;
 
 public class DesktopLauncher {
 
-	public static void main (String[] arg) {
+    public enum Mode { DISPLAY, GA }
 
-        boolean DISPLAY = true;
-        boolean GA = false;
+	public static void main (String[] arg) {
+        Mode mode = false ? Mode.DISPLAY : Mode.GA;
 
         LwjglApplicationConfiguration config;
 
 
-        if( DISPLAY ) {
-            config = new LwjglApplicationConfiguration();
+        switch(mode) {
 
-            config.title = "Desktop Analyzer";
+            case DISPLAY:
+                config = new LwjglApplicationConfiguration();
 
-            config.width  = (25 * 32) / 2; // 400
-            config.height = (38 * 32) / 2; // 608
+                config.title = "Desktop Analyzer";
 
-            //config.x = -1;
-            //config.y = -1;
+                config.width  = (25 * 32) / 2; // 400
+                config.height = (38 * 32) / 2; // 608
 
-            //config.fullscreen = true;
+                //config.x = -1;
+                //config.y = -1;
 
-            new LwjglApplication(new DesktopTrainer(), config);
-        }
+                //config.fullscreen = true;
 
-        if( GA ) {
-            // Generate a Genetic Algorithm object
-            config = new LwjglApplicationConfiguration();
+                new LwjglApplication(new DesktopTrainer(), config);
+                break;
 
-            config.title = "Desktop Trainer";
+            case GA:
+                // Generate a Genetic Algorithm object
+                config = new LwjglApplicationConfiguration();
 
-            config.width = 200;
-            config.height = 200;
+                config.title = "Desktop Trainer";
 
-            config.x = -1;
-            config.y = -1;
+                config.width = 200;
+                config.height = 200;
 
-            //config.fullscreen = true;
+                config.x = -1;
+                config.y = -1;
 
-            new LwjglApplication(new GeneticAlgorithm(), config);
+                //config.fullscreen = true;
+
+                new LwjglApplication(new GeneticAlgorithm(), config);
+                break;
         }
 	}
 }
