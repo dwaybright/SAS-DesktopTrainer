@@ -130,7 +130,7 @@ public interface TrainingParams {
     static final float[] AgentVelocityModArray = { -0.8f, -0.5f, -0.1f, 0, 0.2f, 0.6f, 1 };
 
     /** Agent Velocity (pixels/frame). */
-    static final float AgentMaxMovement = 5f;
+    static final float AgentMaxMovement = 10f;
 
     /** How Far an Agent can Rotate in a frame. */
     static final float AgentMaxTurnAngle = 15f;

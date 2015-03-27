@@ -74,8 +74,6 @@ public class PuppetAgent extends AgentModel {
 
     // Agent Physical Attributes
     private int Health;
-    private float MovementSpeed;
-    private float MovementSpeedScalar;
     private float Eyesight;
     private float Hearing;
 
@@ -118,8 +116,6 @@ public class PuppetAgent extends AgentModel {
 
         // Set Basic Values
         this.Health = 50;
-        this.MovementSpeed = 50;
-        this.MovementSpeedScalar = (float) (TrainingParams.AgentMaxMovement / TrainingParams.FramesPerSecond);
         this.Eyesight = 10;
         this.Hearing = 20;
         
@@ -184,8 +180,6 @@ public class PuppetAgent extends AgentModel {
         
         this.agentShoot = 0;
         
-        float oldAngle = this.Angle;
-        
         // First, calculate inputs
         double[] timeStepData = calculateTrainingInputs();  
         
@@ -199,7 +193,7 @@ public class PuppetAgent extends AgentModel {
         float distance = currentPosition.dst2(nextPosition);
 
         // Make sure to move as far as possible
-        if( distance < this.MovementSpeed ) {
+        if( distance < (TrainingParams.AgentMaxMovement * TrainingParams.AgentMaxMovement) / 2 ) {
 
             if( this.CurrentPathIndex + 1 < this.CurrentPath.getCount() ) {
                 this.CurrentPathIndex++;
@@ -224,9 +218,8 @@ public class PuppetAgent extends AgentModel {
 
         
         // Collect angle information from direction
-        Vector2 direction = nextPosition.sub(currentPosition);
+        Vector2 direction = nextPosition.sub(currentPosition).nor();
         float wantedAngle = (this.Angle + 90) - direction.angle();
-        //float wantedAngle = (this.Angle - 90) - direction.angle();
 
 
         // Rotate in shortest direction
@@ -245,8 +238,8 @@ public class PuppetAgent extends AgentModel {
 
 
         // Update Position
-        this.Pixel_X += direction.x * deltaTime;
-        this.Pixel_Y += direction.y * deltaTime;
+        this.Pixel_X += direction.x * TrainingParams.AgentMaxMovement;
+        this.Pixel_Y += direction.y * TrainingParams.AgentMaxMovement;
         this.Sprite.setCenter(this.Pixel_X, this.Pixel_Y);
 
         // Update Rotation
@@ -429,7 +422,7 @@ public class PuppetAgent extends AgentModel {
      */
     public void setPathToGoal(float goalX, float goalY) {
         // Reset Index Tracker
-        this.CurrentPathIndex = 0;
+        this.CurrentPathIndex = 1;
 
         // Start and Goal node
         TileNode startNode = GraphicsHelpers.findTileNodeByPixelLocation((int)this.Pixel_X, (int)this.Pixel_Y, this.MapNodes);
