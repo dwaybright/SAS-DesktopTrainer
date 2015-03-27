@@ -65,8 +65,7 @@ public class PuppetAgent extends AgentModel {
     private HashSet<TileNode> currPathNodeTracker;
     private GraphPath<TileNode> CurrentPath;
     private int CurrentPathIndex;
-    private float Pixel_X;
-    private float Pixel_Y;
+    private Vector2 position;
     private int Cell_X;
     private int Cell_Y;
     private float Angle;
@@ -110,8 +109,7 @@ public class PuppetAgent extends AgentModel {
 
         // Setup Start Location
         this.CurrentPathIndex = -1;
-        this.Pixel_X = pixelX;
-        this.Pixel_Y = pixelY;
+        this.position = new Vector2(pixelX, pixelY);
         this.Angle = 270;
 
         // Set Basic Values
@@ -187,13 +185,13 @@ public class PuppetAgent extends AgentModel {
         TileNode tempTile = this.CurrentPath.get(this.CurrentPathIndex);
 
         // Calculate pixel distance between positions
-        Vector2 currentPosition = new Vector2(this.Pixel_X, this.Pixel_Y);
+        Vector2 currentPosition = this.position.cpy();
         Vector2 nextPosition = tempTile.getPixelVector2();
 
         float distance = currentPosition.dst2(nextPosition);
 
         // Make sure to move as far as possible
-        if( distance < (TrainingParams.AgentMaxMovement * TrainingParams.AgentMaxMovement) / 2 ) {
+        if( distance < (TrainingParams.AgentMaxMovement * TrainingParams.AgentMaxMovement) ) {
 
             if( this.CurrentPathIndex + 1 < this.CurrentPath.getCount() ) {
                 this.CurrentPathIndex++;
@@ -201,9 +199,8 @@ public class PuppetAgent extends AgentModel {
                 nextPosition = tempTile.getPixelVector2();
             } else {
                 // We have arrived!
-                this.Pixel_X = nextPosition.x;
-                this.Pixel_Y = nextPosition.y;
-                this.Sprite.setPosition(this.Pixel_X, this.Pixel_Y);
+                this.position.set(nextPosition.x, nextPosition.y);
+                this.Sprite.setCenter(nextPosition.x, nextPosition.y);
 
                 // Clear Path
                 this.CurrentPath = null;
@@ -218,29 +215,32 @@ public class PuppetAgent extends AgentModel {
 
         
         // Collect angle information from direction
-        Vector2 direction = nextPosition.sub(currentPosition).nor();
-        float wantedAngle = (this.Angle + 90) - direction.angle();
+        Vector2 direction = nextPosition.cpy().sub(currentPosition).nor();
 
+        float desiredAngle = direction.angle() - 90;                                // The angle the sprite should be pointing (90 deg shift)
+        desiredAngle = (desiredAngle < 0) ? 360 + desiredAngle : desiredAngle;      // Bring back to 0 - 360
+
+        float wantedAngleChange = desiredAngle - this.Angle;                        // How much angle needs to be added between current angle and desired angle.
 
         // Rotate in shortest direction
-        if( wantedAngle > 180 ) {
-            this.deltaAngle = wantedAngle - 360;
-        } else if( wantedAngle < -180) {
-            this.deltaAngle = 360 + wantedAngle;
-        } else {
-            this.deltaAngle = wantedAngle;
+        if( wantedAngleChange >= 180 ) {
+            wantedAngleChange -= 360;
+        } else if( wantedAngleChange <= -180) {
+            wantedAngleChange += 360;
         }
+
+        this.deltaAngle = wantedAngleChange;
 
         // Check that turn is legal (i.e. within Max Turn Per Frame)
         if( Math.abs(this.deltaAngle) > TrainingParams.AgentMaxTurnAngle ) {
-            this.deltaAngle = this.deltaAngle > 0 ? -TrainingParams.AgentMaxTurnAngle : TrainingParams.AgentMaxTurnAngle;
+            this.deltaAngle = this.deltaAngle > 0 ? TrainingParams.AgentMaxTurnAngle : -TrainingParams.AgentMaxTurnAngle;
         }
 
 
         // Update Position
-        this.Pixel_X += direction.x * TrainingParams.AgentMaxMovement;
-        this.Pixel_Y += direction.y * TrainingParams.AgentMaxMovement;
-        this.Sprite.setCenter(this.Pixel_X, this.Pixel_Y);
+        this.position.x += direction.x * TrainingParams.AgentMaxMovement;
+        this.position.y += direction.y * TrainingParams.AgentMaxMovement;
+        this.Sprite.setCenter(this.position.x, this.position.y);
 
         // Update Rotation
         this.Angle += this.deltaAngle;
@@ -280,22 +280,30 @@ public class PuppetAgent extends AgentModel {
         float normAngle = this.deltaAngle / TrainingParams.AgentMaxTurnAngle;
 
         // Compute Rotation Change
-        timeStepData[startIndex + 0] = Math.max(-1, Math.min(1, normAngle * 0.10f * TrainingParams.AgentRotationModArray[0]));    // 100% Counter-Clockwise
-        timeStepData[startIndex + 1] = Math.max(-1, Math.min(1, normAngle * 0.15f * TrainingParams.AgentRotationModArray[1]));    //  66% Counter-Clockwise
-        timeStepData[startIndex + 2] = Math.max(-1, Math.min(1, normAngle * 0.25f * TrainingParams.AgentRotationModArray[2]));    //  33% Counter-Clockwise
-        timeStepData[startIndex + 3] = Math.max(-1, Math.min(1, normAngle * 0.90f * TrainingParams.AgentRotationModArray[3]));    //   No Rotation
-        timeStepData[startIndex + 4] = Math.max(-1, Math.min(1, normAngle * 0.80f * TrainingParams.AgentRotationModArray[4]));    //  33% Clockwise
-        timeStepData[startIndex + 5] = Math.max(-1, Math.min(1, normAngle * 0.70f * TrainingParams.AgentRotationModArray[5]));    //  66% Clockwise
-        timeStepData[startIndex + 6] = Math.max(-1, Math.min(1, normAngle * 0.50f * TrainingParams.AgentRotationModArray[6]));    // 100% Clockwise
+        timeStepData[startIndex + 0] = Math.max(-1f, Math.min(1f, normAngle * 0.10f * TrainingParams.AgentRotationModArray[0]));    // 100% Counter-Clockwise
+        timeStepData[startIndex + 1] = Math.max(-1f, Math.min(1f, normAngle * 0.15f * TrainingParams.AgentRotationModArray[1]));    //  66% Counter-Clockwise
+        timeStepData[startIndex + 2] = Math.max(-1f, Math.min(1f, normAngle * 0.25f * TrainingParams.AgentRotationModArray[2]));    //  33% Counter-Clockwise
+        timeStepData[startIndex + 3] = Math.max(-1f, Math.min(1f, normAngle * 0.90f * TrainingParams.AgentRotationModArray[3]));    //   No Rotation
+        timeStepData[startIndex + 4] = Math.max(-1f, Math.min(1f, normAngle * 0.80f * TrainingParams.AgentRotationModArray[4]));    //  33% Clockwise
+        timeStepData[startIndex + 5] = Math.max(-1f, Math.min(1f, normAngle * 0.70f * TrainingParams.AgentRotationModArray[5]));    //  66% Clockwise
+        timeStepData[startIndex + 6] = Math.max(-1f, Math.min(1f, normAngle * 0.50f * TrainingParams.AgentRotationModArray[6]));    // 100% Clockwise
 
         // Compute Velocity Change
-        timeStepData[startIndex + 14] = 2 * Math.min(1, 1.05 - Math.abs(normAngle)) * TrainingParams.AgentVelocityModArray[0];	// -80% Run Backwards
-        timeStepData[startIndex + 15] = 2 * Math.min(1, 1.05 - Math.abs(normAngle)) * TrainingParams.AgentVelocityModArray[1];	// -50% Jog Backwards
-        timeStepData[startIndex + 16] = 2 * Math.min(1, 1.05 - Math.abs(normAngle)) * TrainingParams.AgentVelocityModArray[2];	// -10% Creep Backwards
-        timeStepData[startIndex + 17] = 2 * Math.min(1, 1.05 - Math.abs(normAngle)) * TrainingParams.AgentVelocityModArray[3];	//   No Movement
-        timeStepData[startIndex + 18] = 2 * Math.min(1, 1.05 - Math.abs(normAngle)) * TrainingParams.AgentVelocityModArray[4];	//  20% Creep Forward
-        timeStepData[startIndex + 19] = 2 * Math.min(1, 1.05 - Math.abs(normAngle)) * TrainingParams.AgentVelocityModArray[5];	//  60% Jog Forward
-        timeStepData[startIndex + 20] = 2 * Math.min(1, 1.05 - Math.abs(normAngle)) * TrainingParams.AgentVelocityModArray[6];	// 100% Run Forward
+        timeStepData[startIndex + 14] = Math.max(-1f, Math.min(1f, (0.9f - Math.abs(normAngle)) * TrainingParams.AgentVelocityModArray[0] * 0.40f));	// -80% Run Backwards
+        timeStepData[startIndex + 15] = Math.max(-1f, Math.min(1f, (0.9f - Math.abs(normAngle)) * TrainingParams.AgentVelocityModArray[1] * 0.50f));	// -50% Jog Backwards
+        timeStepData[startIndex + 16] = Math.max(-1f, Math.min(1f, (0.9f - Math.abs(normAngle)) * TrainingParams.AgentVelocityModArray[2] * 0.60f));	// -10% Creep Backwards
+        timeStepData[startIndex + 17] = Math.max(-1f, Math.min(1f, (0.9f - Math.abs(normAngle)) * TrainingParams.AgentVelocityModArray[3] * 0.85f));	//   No Movement
+        timeStepData[startIndex + 18] = Math.max(-1f, Math.min(1f, (0.9f - Math.abs(normAngle)) * TrainingParams.AgentVelocityModArray[4] * 0.95f));	//  20% Creep Forward
+        timeStepData[startIndex + 19] = Math.max(-1f, Math.min(1f, (0.9f - Math.abs(normAngle)) * TrainingParams.AgentVelocityModArray[5] * 1.00f));	//  60% Jog Forward
+        timeStepData[startIndex + 20] = Math.max(-1f, Math.min(1f, (0.9f - Math.abs(normAngle)) * TrainingParams.AgentVelocityModArray[6] * 1.00f));	// 100% Run Forward
+
+//        timeStepData[startIndex + 14] = 2 * Math.min(1, 1.05 - Math.abs(normAngle)) * TrainingParams.AgentVelocityModArray[0];	// -80% Run Backwards
+//        timeStepData[startIndex + 15] = 2 * Math.min(1, 1.05 - Math.abs(normAngle)) * TrainingParams.AgentVelocityModArray[1];	// -50% Jog Backwards
+//        timeStepData[startIndex + 16] = 2 * Math.min(1, 1.05 - Math.abs(normAngle)) * TrainingParams.AgentVelocityModArray[2];	// -10% Creep Backwards
+//        timeStepData[startIndex + 17] = 2 * Math.min(1, 1.05 - Math.abs(normAngle)) * TrainingParams.AgentVelocityModArray[3];	//   No Movement
+//        timeStepData[startIndex + 18] = 2 * Math.min(1, 1.05 - Math.abs(normAngle)) * TrainingParams.AgentVelocityModArray[4];	//  20% Creep Forward
+//        timeStepData[startIndex + 19] = 2 * Math.min(1, 1.05 - Math.abs(normAngle)) * TrainingParams.AgentVelocityModArray[5];	//  60% Jog Forward
+//        timeStepData[startIndex + 20] = 2 * Math.min(1, 1.05 - Math.abs(normAngle)) * TrainingParams.AgentVelocityModArray[6];	// 100% Run Forward
     	
     	// Compute Gun Movement?  Hard!!!
     	
@@ -307,7 +315,6 @@ public class PuppetAgent extends AgentModel {
     
     private double[] calculateTrainingInputs() {
     	double[] timeStepData = new double[74];
-    	Vector2 position = new Vector2(this.Pixel_X, this.Pixel_Y);
         
         //timeStepData[0] =(double)( Math.abs(this.Angle) > 360 ? (this.Angle / 360) : (this.Angle / 360) );
 
@@ -343,8 +350,8 @@ public class PuppetAgent extends AgentModel {
  		timeStepData[2] = (count > 2) ? timeStepData[2] : 1;
  		
  		// Feed in the 7x7 array of values
- 		int cellX = (int)(position.x / TrainingParams.MapTileSize);
-     	int cellY = (int)(position.y / TrainingParams.MapTileSize);
+ 		int cellX = (int)(this.position.x / TrainingParams.MapTileSize);
+     	int cellY = (int)(this.position.y / TrainingParams.MapTileSize);
      	
  		int currentCellIndex = (cellX * TrainingParams.NumCellsY) + cellY;
      	int gridYCount = 0;
@@ -425,7 +432,7 @@ public class PuppetAgent extends AgentModel {
         this.CurrentPathIndex = 1;
 
         // Start and Goal node
-        TileNode startNode = GraphicsHelpers.findTileNodeByPixelLocation((int)this.Pixel_X, (int)this.Pixel_Y, this.MapNodes);
+        TileNode startNode = GraphicsHelpers.findTileNodeByPixelLocation((int)this.position.x, (int)this.position.y, this.MapNodes);
         TileNode endNode   = GraphicsHelpers.findTileNodeByPixelLocation((int)goalX, (int)goalY, this.MapNodes);
 
         // The returned path once computed

@@ -121,16 +121,16 @@ public interface TrainingParams {
     };
 
     /** Agent Rotation Modification Per Time Step */
-    static final float[] AgentRotationModArray = { -1, -0.666667f, -0.333333f, 0, 0.333333f, 0.666667f, 1 };
+    static final float[] AgentRotationModArray = { -1f, -0.666667f, -0.333333f, 0.001f, 0.333333f, 0.666667f, 1f };
 
     ///** Agent Fire Rotation Modification Per Time Step */
     //static final double[] AgentFireRotationModArray = { -1, -, -5, 0, 5, 15, 1 };
 
     /** Agent Velocity Modification Per Time Step */
-    static final float[] AgentVelocityModArray = { -0.8f, -0.5f, -0.1f, 0, 0.2f, 0.6f, 1 };
+    static final float[] AgentVelocityModArray = { -0.8f, -0.5f, -0.1f, 0.1f, 0.2f, 0.6f, 1f };
 
     /** Agent Velocity (pixels/frame). */
-    static final float AgentMaxMovement = 10f;
+    static final float AgentMaxMovement = 2f;
 
     /** How Far an Agent can Rotate in a frame. */
     static final float AgentMaxTurnAngle = 15f;
