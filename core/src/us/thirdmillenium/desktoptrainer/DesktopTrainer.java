@@ -27,7 +27,7 @@ import java.util.Random;
 
 public class DesktopTrainer extends ApplicationAdapter {
     // Test Index
-    private int TestIndex = 2;
+    private int TestIndex = 1;
 
     // Environment
     private Environment MyEnvironment;

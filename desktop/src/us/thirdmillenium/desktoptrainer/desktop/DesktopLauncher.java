@@ -27,7 +27,7 @@ public class DesktopLauncher {
     public enum Mode { DISPLAY, GA }
 
 	public static void main (String[] arg) {
-        Mode mode = false ? Mode.DISPLAY : Mode.GA;
+        Mode mode = true ? Mode.DISPLAY : Mode.GA;
 
         LwjglApplicationConfiguration config;
 

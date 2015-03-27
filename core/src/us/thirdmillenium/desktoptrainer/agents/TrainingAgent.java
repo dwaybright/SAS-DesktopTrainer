@@ -109,7 +109,7 @@ public class TrainingAgent {
 		
 		// Setup Movement Score Tracking
 		this.score = 0;
-		this.currentCellIndex = GraphicsHelpers.getCurrentCellIndex(PixelX, PixelY);
+		this.currentCellIndex = -1; //GraphicsHelpers.getCurrentCellIndex(PixelX, PixelY);
 	}
 	
 	

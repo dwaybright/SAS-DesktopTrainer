@@ -60,7 +60,7 @@ public class GeneticAlgorithm extends ApplicationAdapter {
 			
 			// Step 1 : Calculate Fitness for each Genome ***  PARALLEL!!! ***
 			FitnessScorer fitScore = new FitnessScorer(GenomePopulation);
-			fitScore.runFitnessScorer();
+			fitScore.runFitnessScorer(random, Math.max(0.30, (i / (double)TrainingParams.NumGenerations)));
 			
 			// Step 2 : Sort Genomes so Elite on top
 			Collections.sort(GenomePopulation);

@@ -1,6 +1,11 @@
 package us.thirdmillenium.desktoptrainer.geneticalgorithm;
 
+
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Random;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -18,12 +23,27 @@ public class FitnessScorer implements TrainingParams {
 	/**
 	 * A threaded method which will compute scores for all Genomes in the population.
 	 */
-	public void runFitnessScorer() {
+	public void runFitnessScorer(Random random, double threshold) {
+        // Randomly choose which maps to use for this generation
+        Set<Integer> useMaps = Collections.newSetFromMap(new ConcurrentHashMap<Integer, Boolean>(20));
+        String mapstr = " maps [ ";
+
+        while( useMaps.size() < 1 ) {
+            for (int i = 1; i <= 5; i++) {
+                if (random.nextDouble() < threshold) {
+                    useMaps.add(new Integer(i));
+                    mapstr = mapstr + i + " ";
+                }
+            }
+        }
+
+        System.out.print(useMaps.size() + mapstr + "] ... ");
+
 		// Create array of objects to run
 		ArrayList<FitnessWorkerThread> workers = new ArrayList<FitnessWorkerThread>();
 		
 		for( int i = 0; i < this.GenomePopulation.size(); i++ ) {
-			workers.add(new FitnessWorkerThread(i, this.GenomePopulation.get(i)));
+			workers.add(new FitnessWorkerThread(i, this.GenomePopulation.get(i), useMaps));
 		}
 		
 		

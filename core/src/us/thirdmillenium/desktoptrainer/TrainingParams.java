@@ -33,7 +33,7 @@ public interface TrainingParams {
     static final String GA_OutputPath   = "desktop/docs/GARunOutput/Run/";
 
     /** Path to the base NN to be used by GA. */
-    static final String PathToBaseNN    = "desktop/docs/BaseANNs/TanH_MLP4.nnet";
+    static final String PathToBaseNN    = "desktop/docs/BaseANNs/nnet_001.nnet";
 
     /** Path to the Training CSVs */
     static final String PathToCSV       = "desktop/docs/TrainingCSVs/trainingCSV2.csv";
@@ -47,10 +47,10 @@ public interface TrainingParams {
     static final int NumGenomes = 1000;
 
     /** The number of Generations to run the GA for. */
-    static final int NumGenerations = 50;
+    static final int NumGenerations = 100;
 
     /** How many Elite Genomes to keep? **/
-    static final int NumEliteGenomes = (int)(NumGenomes * 0.30);
+    static final int NumEliteGenomes = (int)(NumGenomes * 0.35);
 
     /** Perform Crossovers. */
     static final boolean PerformCrossovers = true;
@@ -104,7 +104,7 @@ public interface TrainingParams {
     static final int NumCellsX = 25;
 
     /** The number of simulation steps to take. Assume ~30 FPS, then 1800 is ~1 minute. */
-    static final int SimulationTimeSteps = 900;
+    static final int SimulationTimeSteps = 1000;
 
     /** Assumed FPS rate. */
     static final double FramesPerSecond = 30;
