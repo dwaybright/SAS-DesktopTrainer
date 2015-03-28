@@ -33,7 +33,7 @@ public interface TrainingParams {
     static final String GA_OutputPath   = "desktop/docs/GARunOutput/Run/";
 
     /** Path to the base NN to be used by GA. */
-    static final String PathToBaseNN    = "desktop/docs/BaseANNs/nnet_001.nnet";
+    static final String PathToBaseNN    = "desktop/docs/BaseANNs/MLP3_TanH_Level2.nnet";
 
     /** Path to the Training CSVs */
     static final String PathToCSV       = "desktop/docs/TrainingCSVs/trainingCSV2.csv";
