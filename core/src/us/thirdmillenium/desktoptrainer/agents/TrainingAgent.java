@@ -24,7 +24,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.neuroph.core.NeuralNetwork;
 
-import us.thirdmillenium.desktoptrainer.ai.TileNode;
+import us.thirdmillenium.desktoptrainer.ai.tile.TileNode;
 import us.thirdmillenium.desktoptrainer.brains.Brain;
 import us.thirdmillenium.desktoptrainer.brains.NeuralNetworkBrain;
 import us.thirdmillenium.desktoptrainer.environment.GraphicsHelpers;

@@ -4,9 +4,9 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.concurrent.ConcurrentHashMap;
 
-import us.thirdmillenium.desktoptrainer.ai.TileAStarPathFinder;
-import us.thirdmillenium.desktoptrainer.ai.TileHeuristic;
-import us.thirdmillenium.desktoptrainer.ai.TileNode;
+import us.thirdmillenium.desktoptrainer.ai.tile.TileAStarPathFinder;
+import us.thirdmillenium.desktoptrainer.ai.tile.TileHeuristic;
+import us.thirdmillenium.desktoptrainer.ai.tile.TileNode;
 import us.thirdmillenium.desktoptrainer.TrainingParams;
 
 import com.badlogic.gdx.ai.pfa.DefaultGraphPath;

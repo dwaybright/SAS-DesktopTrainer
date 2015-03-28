@@ -16,7 +16,6 @@ limitations under the License.
 
 package us.thirdmillenium.desktoptrainer.agents;
 
-import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.ai.pfa.DefaultGraphPath;
 import com.badlogic.gdx.ai.pfa.GraphPath;
 import com.badlogic.gdx.graphics.Texture;
@@ -24,23 +23,20 @@ import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.maps.tiled.TiledMap;
-import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
 import com.badlogic.gdx.math.Vector2;
 
 import java.io.File;
 import java.io.PrintWriter;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
-import us.thirdmillenium.desktoptrainer.ai.TileAStarPathFinder;
-import us.thirdmillenium.desktoptrainer.ai.TileHeuristic;
-import us.thirdmillenium.desktoptrainer.ai.TileNode;
+import us.thirdmillenium.desktoptrainer.ai.tile.TileAStarPathFinder;
+import us.thirdmillenium.desktoptrainer.ai.tile.TileHeuristic;
+import us.thirdmillenium.desktoptrainer.ai.tile.TileNode;
 import us.thirdmillenium.desktoptrainer.brains.Brain;
 import us.thirdmillenium.desktoptrainer.brains.PuppetBrain;
 import us.thirdmillenium.desktoptrainer.environment.GraphicsHelpers;

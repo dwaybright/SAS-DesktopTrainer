@@ -16,32 +16,26 @@ limitations under the License.
 
 package us.thirdmillenium.desktoptrainer;
 
-import com.badlogic.gdx.math.Vector2;
-
 
 /**
  * Created by daniel on 3/26/2015.
  */
 public interface TrainingParams {
 
-    /*
-	 * Output Path and NN Structure File Path
-	 */
-
-    /** The base folder to store all GA run information in.
-     *  These files will be generated for you. */
-    static final String GA_OutputPath   = "desktop/docs/GARunOutput/Run/";
-
-    /** Path to the base NN to be used by GA. */
-    static final String PathToBaseNN    = "desktop/docs/BaseANNs/MLP3_TanH_Level2.nnet";
-
-    /** Path to the Training CSVs */
-    static final String PathToCSV       = "desktop/docs/TrainingCSVs/trainingCSV2.csv";
-
 
 	/*
 	 * GA Parameters
 	 */
+
+    /** The base folder to store all GA run information in.
+     *  These files will be generated for you. */
+    static final String GA_OutputPath   = "core/docs/GARunOutput/Run/";
+
+    /** Path to the base NN to be used by GA. */
+    static final String PathToBaseNN    = "core/docs/BaseANNs/MLP3_TanH_Level2.nnet";
+
+    /** Path to the Training CSVs */
+    static final String PathToCSV       = "core/docs/TrainingCSVs/trainingCSV2.csv";
 
     /** The number of Genomes to have each generation. */
     static final int NumGenomes = 1000;
@@ -71,6 +65,17 @@ public interface TrainingParams {
     static final int NumThreads = 10;
 
 
+    /*
+	 * 	Movement Scoring
+	 */
+
+    /** Score for moving to new Tile */
+    static final int ScoreMoveNewTile = 0;
+
+    /** Score for moving to new Tile on Path */
+    static final int ScoreMoveToPrefPathTile = 10;
+
+
 	/*
 	 * Game Simulation Parameters
 	 */
@@ -97,11 +102,15 @@ public interface TrainingParams {
     /** Pixel Size for Agents */
     static final int AgentTileSize = 20;
 
+    /** Pixel radius for Agent (Bounding Circle) */
+    static final int AgentCircleRadius = 10;
+
     /** Cells in Y direction */
     static final int NumCellsY = 38;
 
     /** Cells in X direction */
     static final int NumCellsX = 25;
+
 
     /** The number of simulation steps to take. Assume ~30 FPS, then 1800 is ~1 minute. */
     static final int SimulationTimeSteps = 1000;
@@ -109,25 +118,24 @@ public interface TrainingParams {
     /** Assumed FPS rate. */
     static final double FramesPerSecond = 30;
 
+
     /** Bullet Velocity (pixels/frame). */
     static final float BulletVelocity = 20;
 
     /** Bullet Path vertices at Origin (0,0) */
     static final float[] BulletPathOriginVertices = {
             -2.5f, 0,
-            2.5f, 0,
-            2.5f, BulletVelocity,
+             2.5f, 0,
+             2.5f, BulletVelocity,
             -2.5f, BulletVelocity
     };
 
     /** Agent Rotation Modification Per Time Step */
     static final float[] AgentRotationModArray = { -1f, -0.666667f, -0.333333f, 0.001f, 0.333333f, 0.666667f, 1f };
 
-    ///** Agent Fire Rotation Modification Per Time Step */
-    //static final double[] AgentFireRotationModArray = { -1, -, -5, 0, 5, 15, 1 };
-
     /** Agent Velocity Modification Per Time Step */
     static final float[] AgentVelocityModArray = { -0.8f, -0.5f, -0.1f, 0.1f, 0.2f, 0.6f, 1f };
+
 
     /** Agent Velocity (pixels/frame). */
     static final float AgentMaxMovement = 2f;
@@ -138,23 +146,13 @@ public interface TrainingParams {
     /** Agent Fire Rate (fire/sec) */
     static final float AgentFireRate = 0.5f;
 
+
     /** Shooting Agent hit points */
     static final short ShootingAgentHitPoints = 2;
 
     /** Shooting Agent Accuracy */
     static final float ShootingAgentFireAccuracy = 30f;
 
-    /** Unit vector for Rotation calculations */
-    static final Vector2 unitVector = new Vector2(0,1);
 
 
-	/*
-	 * 	Movement Scoring
-	 */
-
-    /** Score for moving to new Tile */
-    static final int ScoreMoveNewTile = 0;
-
-    /** Score for moving to new Tile on Path */
-    static final int ScoreMoveToPrefPathTile = 10;
 }

@@ -16,7 +16,6 @@ limitations under the License.
 
 package us.thirdmillenium.desktoptrainer.environment;
 
-import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.ai.pfa.GraphPath;
 import com.badlogic.gdx.graphics.OrthographicCamera;
@@ -43,7 +42,7 @@ import org.neuroph.core.NeuralNetwork;
 
 import us.thirdmillenium.desktoptrainer.agents.TrainingAgent;
 import us.thirdmillenium.desktoptrainer.agents.TrainingShooter;
-import us.thirdmillenium.desktoptrainer.ai.TileNode;
+import us.thirdmillenium.desktoptrainer.ai.tile.TileNode;
 import us.thirdmillenium.desktoptrainer.TrainingParams;
 
 

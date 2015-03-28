@@ -19,8 +19,6 @@ package us.thirdmillenium.desktoptrainer.environment;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.ai.pfa.GraphPath;
-import com.badlogic.gdx.ai.pfa.indexed.DefaultIndexedGraph;
-import com.badlogic.gdx.ai.pfa.indexed.IndexedGraph;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
@@ -36,7 +34,6 @@ import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
 import com.badlogic.gdx.math.Intersector;
 import com.badlogic.gdx.math.Polygon;
 import com.badlogic.gdx.math.Rectangle;
-import com.badlogic.gdx.utils.Array;
 
 import java.util.Collections;
 import java.util.Iterator;
@@ -49,8 +46,8 @@ import org.neuroph.core.NeuralNetwork;
 import us.thirdmillenium.desktoptrainer.agents.PuppetAgent;
 import us.thirdmillenium.desktoptrainer.agents.TrainingAgent;
 import us.thirdmillenium.desktoptrainer.agents.TrainingShooter;
-import us.thirdmillenium.desktoptrainer.ai.TileAStarPathFinder;
-import us.thirdmillenium.desktoptrainer.ai.TileNode;
+import us.thirdmillenium.desktoptrainer.ai.tile.TileAStarPathFinder;
+import us.thirdmillenium.desktoptrainer.ai.tile.TileNode;
 import us.thirdmillenium.desktoptrainer.TrainingParams;
 
 

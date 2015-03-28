@@ -22,7 +22,7 @@ import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
 import com.badlogic.gdx.utils.Array;
 
 import us.thirdmillenium.desktoptrainer.TrainingParams;
-import us.thirdmillenium.desktoptrainer.ai.TileNode;
+import us.thirdmillenium.desktoptrainer.ai.tile.TileNode;
 
 import java.util.concurrent.ConcurrentHashMap;
 
