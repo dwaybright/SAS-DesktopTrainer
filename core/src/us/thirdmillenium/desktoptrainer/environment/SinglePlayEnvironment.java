@@ -59,8 +59,8 @@ public class SinglePlayEnvironment extends Environment implements InputProcessor
     private boolean DEBUG = true;
     private boolean DRAW = true;
     
-    private boolean PUPPET = true;
-    private boolean NNET = false;
+    private boolean PUPPET = false;
+    private boolean NNET = true;
     //private float lastAngle = 0;
     
     // Bullet Tracker
