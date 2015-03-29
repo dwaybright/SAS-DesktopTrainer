@@ -134,6 +134,16 @@ public class ConeAgent extends AgentModel {
         }
     }
 
+    @Override
+    public void setPathToGoal(float goalX, float goalY) {
+
+    }
+
+    @Override
+    public int getTraverseNodeIndex() {
+        return GraphicsHelpers.getCurrentCellIndex((int)this.position.x, (int)this.position.y);
+    }
+
 
     /**
      * Computes distance and what is seen for each degree of viewing angle.
@@ -323,6 +333,9 @@ public class ConeAgent extends AgentModel {
     public Rectangle getBoundingRectangle() {
         return this.sprite.getBoundingRectangle();
     }
+
+    @Override
+    public long getScore() { return 0; }
 
 
     /**

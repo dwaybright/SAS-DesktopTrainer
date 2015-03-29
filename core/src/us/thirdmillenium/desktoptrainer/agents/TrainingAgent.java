@@ -65,8 +65,8 @@ public class TrainingAgent extends AgentModel {
 	private long counter;
 	
 	// Trackers from the Environment
-	private Set<TrainingAgent> trainees;
-	private Set<TrainingShooter> shooters;
+	private Set<AgentModel> trainees;
+	private Set<AgentModel> shooters;
 	private Set<GreenBullet> bullets;
 	private ConcurrentHashMap<Integer, TileNode> traverseNodes;
 	private TiledMap tileMap;
@@ -77,7 +77,7 @@ public class TrainingAgent extends AgentModel {
 	
 	
 	public TrainingAgent(int testLevelID, @SuppressWarnings("rawtypes") NeuralNetwork nnet, int PixelX, int PixelY, ConcurrentHashMap<Integer, TileNode> traverseNodes, Random random,
-						 TiledMap tileMap, Set<TrainingAgent> trainees, Set<TrainingShooter> shooters, Set<GreenBullet> bullets) {
+						 TiledMap tileMap, Set<AgentModel> trainees, Set<AgentModel> shooters, Set<GreenBullet> bullets) {
 		// Set Position and Location
 		this.position = new Vector2(PixelX, PixelY);
 		this.rotation = 270;
@@ -186,10 +186,10 @@ public class TrainingAgent extends AgentModel {
 							} 
 							
 							// Check if contains a friendly
-							Iterator<TrainingAgent> friendlyITR = this.trainees.iterator();
+							Iterator<AgentModel> friendlyITR = this.trainees.iterator();
 							
 							while(friendlyITR.hasNext()) {
-								TrainingAgent tempFriendly = friendlyITR.next();
+                                AgentModel tempFriendly = friendlyITR.next();
 								
 								if( tempFriendly != this && tileIndex == tempFriendly.getTraverseNodeIndex() ) {
 									inputs[inputIndex] = 4 / gridNorm;
@@ -197,10 +197,10 @@ public class TrainingAgent extends AgentModel {
 							}
 							
 							// Check if contains an enemy
-							Iterator<TrainingShooter> shooterITR = this.shooters.iterator();
+							Iterator<AgentModel> shooterITR = this.shooters.iterator();
 							
 							while(shooterITR.hasNext()) {
-								TrainingShooter tempShooter = shooterITR.next();
+                                AgentModel tempShooter = shooterITR.next();
 								
 								if( tileIndex == tempShooter.getTraverseNodeIndex() ) {
 									inputs[inputIndex] = 5 / gridNorm;
@@ -385,7 +385,8 @@ public class TrainingAgent extends AgentModel {
 		}
 		
 	}
-	
+
+    @Override
 	public long getScore() { return this.score; }
 	
 	
@@ -458,11 +459,17 @@ public class TrainingAgent extends AgentModel {
     public void drawVision(ShapeRenderer sr) {
         return;
     }
-	
-	
-	public int getTraverseNodeIndex() {
-		return GraphicsHelpers.getCurrentCellIndex((int)this.position.x, (int)this.position.y);
-	}
+
+    @Override
+    public void setPathToGoal(float goalX, float goalY) {
+
+    }
+
+
+    @Override
+    public int getTraverseNodeIndex() {
+        return GraphicsHelpers.getCurrentCellIndex((int)this.position.x, (int)this.position.y);
+    }
 	
 	@Override
 	public Vector2 getPosition() { return this.position; }

@@ -44,12 +44,14 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.neuroph.core.NeuralNetwork;
 
 import us.thirdmillenium.desktoptrainer.Params;
+import us.thirdmillenium.desktoptrainer.agents.AgentModel;
 import us.thirdmillenium.desktoptrainer.agents.PuppetAgent;
 import us.thirdmillenium.desktoptrainer.agents.TrainingAgent;
 import us.thirdmillenium.desktoptrainer.agents.TrainingShooter;
 import us.thirdmillenium.desktoptrainer.ai.tile.TileAStarPathFinder;
 import us.thirdmillenium.desktoptrainer.ai.tile.TileNode;
 import us.thirdmillenium.desktoptrainer.graphics.GraphicsHelpers;
+import us.thirdmillenium.desktoptrainer.graphics.Line;
 
 
 public class SinglePlayEnvironment extends Environment implements InputProcessor {
@@ -65,12 +67,15 @@ public class SinglePlayEnvironment extends Environment implements InputProcessor
  	private Set<GreenBullet> BulletTracker;
  	
  	// Agent Trackers
- 	private Set<TrainingShooter> shooters;
- 	private Set<TrainingAgent> trainees; 
- 	private PuppetAgent puppet;
+ 	private Set<AgentModel> shooters;
+ 	private Set<AgentModel> trainees;
+ 	private AgentModel puppet;
 
     // OpenGL Camera for Orientation
     private OrthographicCamera Camera;
+
+    // Collision lines
+    private Set<Line> collisionLines;
 
     // The Tiled Map Assets for this Environment
     private TiledMap TiledMap;
@@ -123,9 +128,10 @@ public class SinglePlayEnvironment extends Environment implements InputProcessor
         this.LineRenderer = new ShapeRenderer();
         
         // Setup Trackers
-        this.BulletTracker = Collections.newSetFromMap(new ConcurrentHashMap<GreenBullet, Boolean>());
-        this.trainees      = Collections.newSetFromMap(new ConcurrentHashMap<TrainingAgent, Boolean>());
-        this.shooters      = Collections.newSetFromMap(new ConcurrentHashMap<TrainingShooter, Boolean>());
+        this.BulletTracker  = Collections.newSetFromMap(new ConcurrentHashMap<GreenBullet, Boolean>());
+        this.trainees       = Collections.newSetFromMap(new ConcurrentHashMap<AgentModel, Boolean>());
+        this.shooters       = Collections.newSetFromMap(new ConcurrentHashMap<AgentModel, Boolean>());
+        this.collisionLines = createCollisionLineSet(this.TiledMap);
         
         // Generate TileMap Objects
         this.TraverseNodes = new ConcurrentHashMap<Integer, TileNode>();
@@ -173,6 +179,8 @@ public class SinglePlayEnvironment extends Environment implements InputProcessor
         
         if( PUPPET ) {
         	this.puppet = new PuppetAgent(this.TiledMap, this.TraverseNodes, new TileAStarPathFinder(), startX, startY, this.BulletTracker, this.shooters);
+
+
         }
     }
 
@@ -226,11 +234,11 @@ public class SinglePlayEnvironment extends Environment implements InputProcessor
             }
             
             try{
-    		    Iterator<TrainingAgent> agentItr = this.trainees.iterator();
+    		    Iterator<AgentModel> agentItr = this.trainees.iterator();
     		    
     		    while(agentItr.hasNext()) {
-    		    	TrainingAgent currAgent = agentItr.next();
-    		    	currAgent.drawPreferredPath(this.LineRenderer);
+                    AgentModel currAgent = agentItr.next();
+    		    	currAgent.drawPath(this.LineRenderer);
     		    }
             } catch( Exception ex) { /* Do nothing */ }
 
@@ -247,20 +255,20 @@ public class SinglePlayEnvironment extends Environment implements InputProcessor
         	this.puppet.drawAgent(this.SpriteBatchRenderer);
         }
 
-        Iterator<TrainingShooter> shootItr = this.shooters.iterator();
+        Iterator<AgentModel> shootItr = this.shooters.iterator();
         
         while(shootItr.hasNext()) {
-        	TrainingShooter currShooter = shootItr.next();
+            AgentModel currShooter = shootItr.next();
         	
         	currShooter.updateAgent(deltaTime);
         	if( DRAW ) { currShooter.drawAgent(this.SpriteBatchRenderer); }
         }
         
         try{
-		    Iterator<TrainingAgent> agentItr = this.trainees.iterator();
+		    Iterator<AgentModel> agentItr = this.trainees.iterator();
 		    
 		    while(agentItr.hasNext()) {
-		    	TrainingAgent currAgent = agentItr.next();
+                AgentModel currAgent = agentItr.next();
 		    	
 		    	currAgent.updateAgent(deltaTime);
 		    	if( DRAW ) { currAgent.drawAgent(this.SpriteBatchRenderer); }

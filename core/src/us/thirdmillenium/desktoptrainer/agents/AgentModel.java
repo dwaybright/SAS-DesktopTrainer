@@ -46,6 +46,15 @@ public abstract class AgentModel {
     public abstract void updateAgent(float deltaTime);
 
 
+    public abstract void setPathToGoal(float goalX, float goalY);
+
+
+    public abstract int getTraverseNodeIndex();
+
+
+    public abstract long getScore();
+
+
     /**
      * This method draws the Agent sprite.
      *

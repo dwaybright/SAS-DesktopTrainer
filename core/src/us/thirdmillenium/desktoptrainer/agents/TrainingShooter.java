@@ -35,8 +35,8 @@ import com.badlogic.gdx.math.Vector2;
 
 public class TrainingShooter extends AgentModel {
 	// Training Agents
-	private Set<TrainingAgent> trainees;
-	private Set<TrainingShooter> shooters;
+	private Set<AgentModel> trainees;
+	private Set<AgentModel> shooters;
 	private Set<GreenBullet> bulletTracker;
 	
 	// Shooter Position
@@ -54,7 +54,7 @@ public class TrainingShooter extends AgentModel {
 	private Texture deadPic;	
 	
 	
-	public TrainingShooter(int pixelX, int pixelY, Set<TrainingAgent> trainees, Set<TrainingShooter> shooters, Set<GreenBullet> bulletTracker, Random random) {
+	public TrainingShooter(int pixelX, int pixelY, Set<AgentModel> trainees, Set<AgentModel> shooters, Set<GreenBullet> bulletTracker, Random random) {
 		this.shooters = shooters;
 		this.trainees = trainees;
 		this.bulletTracker = bulletTracker;
@@ -80,6 +80,9 @@ public class TrainingShooter extends AgentModel {
 
     }
 
+    @Override
+    public long getScore() { return 0; }
+
     /**
 	 * If Agent is alive, will scan surrounding for Trainee, and fire at it if not in cooldown.
 	 */
@@ -99,10 +102,10 @@ public class TrainingShooter extends AgentModel {
 		// If Agent is alive and can shoot, scan for target in range.
 		if( this.alive && this.canShoot ) {
 			// If a Trainee has wondered within firing range, fire at it.
-			Iterator<TrainingAgent> itr = this.trainees.iterator();
+			Iterator<AgentModel> itr = this.trainees.iterator();
 			
 			while(itr.hasNext()) {
-				TrainingAgent trainee = itr.next();
+				TrainingAgent trainee = (TrainingAgent)itr.next();
 				Vector2 traineePosition = trainee.getPosition();
 				
 				// Trainee in Range, Shoot it!
@@ -158,6 +161,11 @@ public class TrainingShooter extends AgentModel {
     @Override
     public Vector2 getPosition() {
         return this.position;
+    }
+
+    @Override
+    public void setPathToGoal(float goalX, float goalY) {
+
     }
 
 

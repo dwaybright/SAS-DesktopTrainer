@@ -41,10 +41,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.neuroph.core.NeuralNetwork;
 
 import us.thirdmillenium.desktoptrainer.Params;
+import us.thirdmillenium.desktoptrainer.agents.AgentModel;
 import us.thirdmillenium.desktoptrainer.agents.TrainingAgent;
 import us.thirdmillenium.desktoptrainer.agents.TrainingShooter;
 import us.thirdmillenium.desktoptrainer.ai.tile.TileNode;
 import us.thirdmillenium.desktoptrainer.graphics.GraphicsHelpers;
+import us.thirdmillenium.desktoptrainer.graphics.Line;
 
 
 public class TestEnvironment extends Environment implements InputProcessor {
@@ -56,8 +58,8 @@ public class TestEnvironment extends Environment implements InputProcessor {
  	private Set<GreenBullet> bulletTracker;
  	
  	// Agent Trackers
- 	private Set<TrainingShooter> shooters;
- 	private Set<TrainingAgent> trainees; 
+ 	private Set<AgentModel> shooters;
+ 	private Set<AgentModel> trainees;
 
     // OpenGL camera for Orientation
     private OrthographicCamera camera;
@@ -67,6 +69,9 @@ public class TestEnvironment extends Environment implements InputProcessor {
     private TiledMapRenderer tiledMapRenderer;
     private float width;
     private float height;
+
+    // Collision lines
+    private Set<Line> collisionLines;
 
     // A mapping of all Nodes that are traversible, and a ShapeRenderer to plot them
 	private GraphPath<TileNode> tileNodeGraph;
@@ -103,9 +108,10 @@ public class TestEnvironment extends Environment implements InputProcessor {
         this.tiledMapRenderer = new OrthogonalTiledMapRenderer(this.tiledMap);
         
         // Setup Trackers
-        this.bulletTracker = Collections.newSetFromMap(new ConcurrentHashMap<GreenBullet, Boolean>());
-        this.trainees      = Collections.newSetFromMap(new ConcurrentHashMap<TrainingAgent, Boolean>());
-        this.shooters      = Collections.newSetFromMap(new ConcurrentHashMap<TrainingShooter, Boolean>());
+        this.bulletTracker  = Collections.newSetFromMap(new ConcurrentHashMap<GreenBullet, Boolean>());
+        this.trainees       = Collections.newSetFromMap(new ConcurrentHashMap<AgentModel, Boolean>());
+        this.shooters       = Collections.newSetFromMap(new ConcurrentHashMap<AgentModel, Boolean>());
+        this.collisionLines = createCollisionLineSet(this.tiledMap);
 
         // Generate TileMap Objects
         this.traverseNodes = new ConcurrentHashMap<Integer, TileNode>();
@@ -131,19 +137,19 @@ public class TestEnvironment extends Environment implements InputProcessor {
     	
     	for(int p = 0; p < Params.SimulationTimeSteps; p++ ) {
 	
-	        Iterator<TrainingShooter> shootItr = this.shooters.iterator();
+	        Iterator<AgentModel> shootItr = this.shooters.iterator();
 	        
 	        while(shootItr.hasNext()) {
-	        	TrainingShooter currShooter = shootItr.next();
+                AgentModel currShooter = shootItr.next();
 	        	
 	        	currShooter.updateAgent(deltaTime);
 	        }
 	        
 	        try{
-			    Iterator<TrainingAgent> agentItr = this.trainees.iterator();
+			    Iterator<AgentModel> agentItr = this.trainees.iterator();
 			    
 			    while(agentItr.hasNext()) {
-			    	TrainingAgent currAgent = agentItr.next();
+                    AgentModel currAgent = agentItr.next();
 			    	
 			    	currAgent.updateAgent(deltaTime);
 			    }
@@ -200,11 +206,11 @@ public class TestEnvironment extends Environment implements InputProcessor {
     @Override
     public long getScore() {
         // Collect Scores from the Training Agent(s) and return
-        Iterator<TrainingAgent> agentItr = this.trainees.iterator();
+        Iterator<AgentModel> agentItr = this.trainees.iterator();
         long score = 0;
 
         while(agentItr.hasNext()) {
-            TrainingAgent currAgent = agentItr.next();
+            AgentModel currAgent = agentItr.next();
             score += currAgent.getScore();
         }
 

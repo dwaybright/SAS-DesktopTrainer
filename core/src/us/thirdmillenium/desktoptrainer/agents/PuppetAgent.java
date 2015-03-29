@@ -57,7 +57,7 @@ public class PuppetAgent extends AgentModel {
     private TileAStarPathFinder PathFinder;
     private int AgentSize = 10;  // 20 x 20
     private Set<GreenBullet> bullets;
-    private Set<TrainingShooter> shooters;
+    private Set<AgentModel> shooters;
 
     // Agent location
     private HashSet<TileNode> currPathNodeTracker;
@@ -90,7 +90,7 @@ public class PuppetAgent extends AgentModel {
 
 
     public PuppetAgent(TiledMap myTiledMap, ConcurrentHashMap<Integer, TileNode> mapNodes,
-                       TileAStarPathFinder pathFinder, int pixelX, int pixelY, Set<GreenBullet> bullets, Set<TrainingShooter> shooters)
+                       TileAStarPathFinder pathFinder, int pixelX, int pixelY, Set<GreenBullet> bullets, Set<AgentModel> shooters)
     {
         // Setup game world parameters
         this.MyTiledMap = myTiledMap;
@@ -279,6 +279,11 @@ public class PuppetAgent extends AgentModel {
     }
 
     @Override
+    public int getTraverseNodeIndex() {
+        return GraphicsHelpers.getCurrentCellIndex((int)this.position.x, (int)this.position.y);
+    }
+
+    @Override
     public Vector2 getPosition() {
         return null;
     }
@@ -407,10 +412,10 @@ public class PuppetAgent extends AgentModel {
  							}*/
  							
  							// Check if contains an enemy
- 							Iterator<TrainingShooter> shooterITR = this.shooters.iterator();
+ 							Iterator<AgentModel> shooterITR = this.shooters.iterator();
  							
  							while(shooterITR.hasNext()) {
- 								TrainingShooter tempShooter = shooterITR.next();
+                                AgentModel tempShooter = shooterITR.next();
  								
  								if( tileIndex == tempShooter.getTraverseNodeIndex() ) {
  									timeStepData[inputIndex] =  (5 / (double)5);
@@ -435,6 +440,7 @@ public class PuppetAgent extends AgentModel {
      * @param goalX
      * @param goalY
      */
+    @Override
     public void setPathToGoal(float goalX, float goalY) {
         // Reset Index Tracker
         this.CurrentPathIndex = 1;
@@ -466,6 +472,8 @@ public class PuppetAgent extends AgentModel {
 		}
     }
 
+    @Override
+    public long getScore() { return 0; }
 
 
     @Override

@@ -18,12 +18,23 @@ package us.thirdmillenium.desktoptrainer.environment;
 
 import com.badlogic.gdx.ai.pfa.DefaultGraphPath;
 import com.badlogic.gdx.ai.pfa.GraphPath;
+import com.badlogic.gdx.maps.MapObjects;
+import com.badlogic.gdx.maps.objects.RectangleMapObject;
+import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
+import com.badlogic.gdx.math.Intersector;
+import com.badlogic.gdx.math.Polygon;
+import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
 
 import us.thirdmillenium.desktoptrainer.Params;
 import us.thirdmillenium.desktoptrainer.ai.tile.TileNode;
+import us.thirdmillenium.desktoptrainer.graphics.GraphicsHelpers;
+import us.thirdmillenium.desktoptrainer.graphics.Line;
 
+import java.util.Collections;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 
@@ -56,6 +67,47 @@ public abstract class Environment {
      * This method disposes LibGDX Batch draw objects.
      */
     public abstract void dispose();
+
+
+    public static Set<Line> createCollisionLineSet(TiledMap gameMap) {
+        Set<Line> collisionSet = Collections.newSetFromMap(new ConcurrentHashMap<Line, Boolean>());
+
+        // Add World boundaries - HARD CODED!!!
+        collisionSet.add(new Line(new Vector2(  0,    0), new Vector2(  0, 1216)));
+        collisionSet.add(new Line(new Vector2(  0,    0), new Vector2(800,    0)));
+        collisionSet.add(new Line(new Vector2(800, 1216), new Vector2(800,    0)));
+        collisionSet.add(new Line(new Vector2(800, 1216), new Vector2(  0, 1216)));
+
+        // Add Collision Box Lines that surround walls
+        MapObjects wallMapObjects = gameMap.getLayers().get(2).getObjects();
+        Object rectangleMapObject;
+        Rectangle collisionRect;
+
+        for( int i = 0; i < wallMapObjects.getCount(); i++) {
+            rectangleMapObject = wallMapObjects.get(i);
+
+            // Make sure this is a Rectangle from Tiled describing a wall.
+            if( rectangleMapObject.getClass() == RectangleMapObject.class ) {
+                collisionRect = ((RectangleMapObject)rectangleMapObject).getRectangle();
+
+                collisionSet.add(new Line(new Vector2(collisionRect.x, collisionRect.y),
+                                          new Vector2(collisionRect.x, collisionRect.y + collisionRect.height)));
+
+                collisionSet.add(new Line(new Vector2(collisionRect.x, collisionRect.y),
+                                          new Vector2(collisionRect.x + collisionRect.width, collisionRect.y)));
+
+                collisionSet.add(new Line(new Vector2(collisionRect.x + collisionRect.width, collisionRect.y + collisionRect.height),
+                                          new Vector2(collisionRect.x, collisionRect.y + collisionRect.height)));
+
+                collisionSet.add(new Line(new Vector2(collisionRect.x + collisionRect.width, collisionRect.y + collisionRect.height),
+                                          new Vector2(collisionRect.x + collisionRect.width, collisionRect.y)));
+            }
+        }
+
+
+        return collisionSet;
+    }
+
 
 
     /**
