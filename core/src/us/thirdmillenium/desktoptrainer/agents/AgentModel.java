@@ -20,6 +20,7 @@ package us.thirdmillenium.desktoptrainer.agents;
 
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.math.Vector2;
 
 /**
  * The AgentModel class is extended by all actual Agents to be made.
@@ -27,12 +28,43 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 public abstract class AgentModel {
 
 
-
+    /**
+     * This method is called if your agent bounces into something in the world.
+     */
     public abstract void agentHit();
 
-    public abstract void updateAgentState(float deltaTime);
 
+    /**
+     * This method adjusts Agent rotation and velocity in time.
+     *
+     * @param deltaTime
+     */
+    public abstract void updateAgent(float deltaTime);
+
+
+    /**
+     * This method draws the Agent sprite.
+     *
+     * @param sb
+     */
     public abstract void drawAgent(SpriteBatch sb);
 
-    public abstract void drawLines(ShapeRenderer sr);
+
+    /**
+     * This method draws this Agent's current preferred path.
+     *
+     * @param sr
+     */
+    public abstract void drawPath(ShapeRenderer sr);
+
+
+    /**
+     * This method draws a translucent box around what the Agent is viewing.
+     *
+     * @param sr
+     */
+    public abstract void drawVision(ShapeRenderer sr);
+
+
+    public abstract Vector2 getPosition();
 }

@@ -1,6 +1,6 @@
 package us.thirdmillenium.desktoptrainer.environment;
 
-import us.thirdmillenium.desktoptrainer.TrainingParams;
+import us.thirdmillenium.desktoptrainer.Params;
 
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Sprite;
@@ -22,7 +22,7 @@ public class GreenBullet {
 		this.degreeAngle = degreeAngle;
 		
 		// Create, Rotate, and Translate the Bullet Path Bounding Box
-		this.bulletPath = new Polygon(TrainingParams.BulletPathOriginVertices);
+		this.bulletPath = new Polygon(Params.BulletPathOriginVertices);
 		this.bulletPath.rotate(degreeAngle);
 		this.bulletPath.translate(bulletLocation.x, bulletLocation.y);
 		
@@ -42,7 +42,7 @@ public class GreenBullet {
 		// Update Location
 		Vector2 unitVec = new Vector2(0,1);
 		unitVec.rotate(this.degreeAngle);
-		unitVec.scl(TrainingParams.BulletVelocity);
+		unitVec.scl(Params.BulletVelocity);
 		this.currentLocation.add(unitVec);
 		
 		// Update Bullet Path Location by Translating to new spot

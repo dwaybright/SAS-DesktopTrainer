@@ -34,14 +34,14 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
+import us.thirdmillenium.desktoptrainer.Params;
 import us.thirdmillenium.desktoptrainer.ai.tile.TileAStarPathFinder;
 import us.thirdmillenium.desktoptrainer.ai.tile.TileHeuristic;
 import us.thirdmillenium.desktoptrainer.ai.tile.TileNode;
 import us.thirdmillenium.desktoptrainer.brains.Brain;
 import us.thirdmillenium.desktoptrainer.brains.PuppetBrain;
-import us.thirdmillenium.desktoptrainer.environment.GraphicsHelpers;
+import us.thirdmillenium.desktoptrainer.graphics.GraphicsHelpers;
 import us.thirdmillenium.desktoptrainer.environment.GreenBullet;
-import us.thirdmillenium.desktoptrainer.TrainingParams;
 
 
 public class PuppetAgent extends AgentModel {
@@ -82,7 +82,7 @@ public class PuppetAgent extends AgentModel {
     
     
     // Output Path
-    private String csvOutputPath = TrainingParams.PathToCSV;
+    private String csvOutputPath = Params.PathToCSV;
     private File csvOutputFile;
     private ArrayList<double[]> trainingData;
 
@@ -92,15 +92,15 @@ public class PuppetAgent extends AgentModel {
     {
         // Setup game world parameters
         this.MyTiledMap = myTiledMap;
-        this.TileSize = TrainingParams.MapTileSize;
+        this.TileSize = Params.MapTileSize;
         this.MapNodes = mapNodes;
         this.PathFinder = pathFinder;
         this.bullets = bullets;
         this.shooters = shooters;
 
         // Setup Graphics
-        this.Alive = new Texture(TrainingParams.TrainingAgentLivePNG);
-        this.Dead = new Texture(TrainingParams.DeadAgentPNG);
+        this.Alive = new Texture(Params.TrainingAgentLivePNG);
+        this.Dead = new Texture(Params.DeadAgentPNG);
         this.Sprite = new Sprite(Alive);
 
         // Setup Start Location
@@ -162,7 +162,7 @@ public class PuppetAgent extends AgentModel {
     }
 
     @Override
-    public void updateAgentState(float deltaTime) {
+    public void updateAgent(float deltaTime) {
         // Bounds Check - Do nothing
         if( this.CurrentPath == null) {
             return;
@@ -187,7 +187,7 @@ public class PuppetAgent extends AgentModel {
         float distance = currentPosition.dst2(nextPosition);
 
         // Make sure to move as far as possible
-        if( distance < (TrainingParams.AgentMaxMovement * TrainingParams.AgentMaxMovement) ) {
+        if( distance < (Params.AgentMaxMovement * Params.AgentMaxMovement) ) {
 
             if( this.CurrentPathIndex + 1 < this.CurrentPath.getCount() ) {
                 this.CurrentPathIndex++;
@@ -228,14 +228,14 @@ public class PuppetAgent extends AgentModel {
         this.deltaAngle = wantedAngleChange;
 
         // Check that turn is legal (i.e. within Max Turn Per Frame)
-        if( Math.abs(this.deltaAngle) > TrainingParams.AgentMaxTurnAngle ) {
-            this.deltaAngle = this.deltaAngle > 0 ? TrainingParams.AgentMaxTurnAngle : -TrainingParams.AgentMaxTurnAngle;
+        if( Math.abs(this.deltaAngle) > Params.AgentMaxTurnAngle ) {
+            this.deltaAngle = this.deltaAngle > 0 ? Params.AgentMaxTurnAngle : -Params.AgentMaxTurnAngle;
         }
 
 
         // Update Position
-        this.position.x += direction.x * TrainingParams.AgentMaxMovement;
-        this.position.y += direction.y * TrainingParams.AgentMaxMovement;
+        this.position.x += direction.x * Params.AgentMaxMovement;
+        this.position.y += direction.y * Params.AgentMaxMovement;
         this.Sprite.setCenter(this.position.x, this.position.y);
 
         // Update Rotation
@@ -260,7 +260,7 @@ public class PuppetAgent extends AgentModel {
     }
 
     @Override
-    public void drawLines(ShapeRenderer sr) {
+    public void drawPath(ShapeRenderer sr) {
 
         // Draws the CurrentPath.
         if( this.CurrentPath != null) {
@@ -270,28 +270,38 @@ public class PuppetAgent extends AgentModel {
             }
         }
     }
-    
-    
+
+    @Override
+    public void drawVision(ShapeRenderer sr) {
+
+    }
+
+    @Override
+    public Vector2 getPosition() {
+        return null;
+    }
+
+
     private void calculateTrainingOutputs(double[] timeStepData, int startIndex) {
-        float normAngle = this.deltaAngle / TrainingParams.AgentMaxTurnAngle;
+        float normAngle = this.deltaAngle / Params.AgentMaxTurnAngle;
 
         // Compute Rotation Change
-        timeStepData[startIndex + 0] = Math.max(-1f, Math.min(1f, normAngle * 0.10f * TrainingParams.AgentRotationModArray[0]));    // 100% Counter-Clockwise
-        timeStepData[startIndex + 1] = Math.max(-1f, Math.min(1f, normAngle * 0.15f * TrainingParams.AgentRotationModArray[1]));    //  66% Counter-Clockwise
-        timeStepData[startIndex + 2] = Math.max(-1f, Math.min(1f, normAngle * 0.25f * TrainingParams.AgentRotationModArray[2]));    //  33% Counter-Clockwise
-        timeStepData[startIndex + 3] = Math.max(-1f, Math.min(1f, normAngle * 0.90f * TrainingParams.AgentRotationModArray[3]));    //   No Rotation
-        timeStepData[startIndex + 4] = Math.max(-1f, Math.min(1f, normAngle * 0.80f * TrainingParams.AgentRotationModArray[4]));    //  33% Clockwise
-        timeStepData[startIndex + 5] = Math.max(-1f, Math.min(1f, normAngle * 0.70f * TrainingParams.AgentRotationModArray[5]));    //  66% Clockwise
-        timeStepData[startIndex + 6] = Math.max(-1f, Math.min(1f, normAngle * 0.50f * TrainingParams.AgentRotationModArray[6]));    // 100% Clockwise
+        timeStepData[startIndex + 0] = Math.max(-1f, Math.min(1f, normAngle * 0.10f * Params.AgentRotationModArray[0]));    // 100% Counter-Clockwise
+        timeStepData[startIndex + 1] = Math.max(-1f, Math.min(1f, normAngle * 0.15f * Params.AgentRotationModArray[1]));    //  66% Counter-Clockwise
+        timeStepData[startIndex + 2] = Math.max(-1f, Math.min(1f, normAngle * 0.25f * Params.AgentRotationModArray[2]));    //  33% Counter-Clockwise
+        timeStepData[startIndex + 3] = Math.max(-1f, Math.min(1f, normAngle * 0.90f * Params.AgentRotationModArray[3]));    //   No Rotation
+        timeStepData[startIndex + 4] = Math.max(-1f, Math.min(1f, normAngle * 0.80f * Params.AgentRotationModArray[4]));    //  33% Clockwise
+        timeStepData[startIndex + 5] = Math.max(-1f, Math.min(1f, normAngle * 0.70f * Params.AgentRotationModArray[5]));    //  66% Clockwise
+        timeStepData[startIndex + 6] = Math.max(-1f, Math.min(1f, normAngle * 0.50f * Params.AgentRotationModArray[6]));    // 100% Clockwise
 
         // Compute Velocity Change
-        timeStepData[startIndex + 14] = Math.max(-1f, Math.min(1f, (0.9f - Math.abs(normAngle)) * TrainingParams.AgentVelocityModArray[0] * 0.40f));	// -80% Run Backwards
-        timeStepData[startIndex + 15] = Math.max(-1f, Math.min(1f, (0.9f - Math.abs(normAngle)) * TrainingParams.AgentVelocityModArray[1] * 0.50f));	// -50% Jog Backwards
-        timeStepData[startIndex + 16] = Math.max(-1f, Math.min(1f, (0.9f - Math.abs(normAngle)) * TrainingParams.AgentVelocityModArray[2] * 0.60f));	// -10% Creep Backwards
-        timeStepData[startIndex + 17] = Math.max(-1f, Math.min(1f, (0.9f - Math.abs(normAngle)) * TrainingParams.AgentVelocityModArray[3] * 0.85f));	//   No Movement
-        timeStepData[startIndex + 18] = Math.max(-1f, Math.min(1f, (0.9f - Math.abs(normAngle)) * TrainingParams.AgentVelocityModArray[4] * 0.95f));	//  20% Creep Forward
-        timeStepData[startIndex + 19] = Math.max(-1f, Math.min(1f, (0.9f - Math.abs(normAngle)) * TrainingParams.AgentVelocityModArray[5] * 1.00f));	//  60% Jog Forward
-        timeStepData[startIndex + 20] = Math.max(-1f, Math.min(1f, (0.9f - Math.abs(normAngle)) * TrainingParams.AgentVelocityModArray[6] * 1.00f));	// 100% Run Forward
+        timeStepData[startIndex + 14] = Math.max(-1f, Math.min(1f, (0.9f - Math.abs(normAngle)) * Params.AgentVelocityModArray[0] * 0.40f));	// -80% Run Backwards
+        timeStepData[startIndex + 15] = Math.max(-1f, Math.min(1f, (0.9f - Math.abs(normAngle)) * Params.AgentVelocityModArray[1] * 0.50f));	// -50% Jog Backwards
+        timeStepData[startIndex + 16] = Math.max(-1f, Math.min(1f, (0.9f - Math.abs(normAngle)) * Params.AgentVelocityModArray[2] * 0.60f));	// -10% Creep Backwards
+        timeStepData[startIndex + 17] = Math.max(-1f, Math.min(1f, (0.9f - Math.abs(normAngle)) * Params.AgentVelocityModArray[3] * 0.85f));	//   No Movement
+        timeStepData[startIndex + 18] = Math.max(-1f, Math.min(1f, (0.9f - Math.abs(normAngle)) * Params.AgentVelocityModArray[4] * 0.95f));	//  20% Creep Forward
+        timeStepData[startIndex + 19] = Math.max(-1f, Math.min(1f, (0.9f - Math.abs(normAngle)) * Params.AgentVelocityModArray[5] * 1.00f));	//  60% Jog Forward
+        timeStepData[startIndex + 20] = Math.max(-1f, Math.min(1f, (0.9f - Math.abs(normAngle)) * Params.AgentVelocityModArray[6] * 1.00f));	// 100% Run Forward
 
 //        timeStepData[startIndex + 14] = 2 * Math.min(1, 1.05 - Math.abs(normAngle)) * TrainingParams.AgentVelocityModArray[0];	// -80% Run Backwards
 //        timeStepData[startIndex + 15] = 2 * Math.min(1, 1.05 - Math.abs(normAngle)) * TrainingParams.AgentVelocityModArray[1];	// -50% Jog Backwards
@@ -333,7 +343,7 @@ public class PuppetAgent extends AgentModel {
  		while( bulletITR.hasNext() && count < 3 ) {
  			GreenBullet currBullet = bulletITR.next();
  			
- 			if( position.dst(currBullet.getBulletVector()) < (TrainingParams.MapTileSize * 3) ) {
+ 			if( position.dst(currBullet.getBulletVector()) < (Params.MapTileSize * 3) ) {
  				Vector2 direction = currBullet.getBulletVector().cpy().sub(position).nor();
  				Vector2 unitVec = new Vector2(0,1);
  				
@@ -346,24 +356,24 @@ public class PuppetAgent extends AgentModel {
  		timeStepData[2] = (count > 2) ? timeStepData[2] : 1;
  		
  		// Feed in the 7x7 array of values
- 		int cellX = (int)(this.position.x / TrainingParams.MapTileSize);
-     	int cellY = (int)(this.position.y / TrainingParams.MapTileSize);
+ 		int cellX = (int)(this.position.x / Params.MapTileSize);
+     	int cellY = (int)(this.position.y / Params.MapTileSize);
      	
- 		int currentCellIndex = (cellX * TrainingParams.NumCellsY) + cellY;
+ 		int currentCellIndex = (cellX * Params.NumCellsY) + cellY;
      	int gridYCount = 0;
      	int gridXCount = 0;    	
      	
  		// Compute from Bottom Left to Top Right - note that it is (Col,Row)
  		for( int gridY = cellY - 3; gridY <= cellY + 3; gridY++ ) {
  						
- 			if( gridY >= 0 && gridY < TrainingParams.NumCellsY ) {
+ 			if( gridY >= 0 && gridY < Params.NumCellsY ) {
  				gridXCount = 0;
  				
  				for( int gridX = cellX - 3; gridX <= cellX + 3; gridX++ ) {
  					
- 					if( gridX >= 0 && gridX < TrainingParams.NumCellsX ) {
+ 					if( gridX >= 0 && gridX < Params.NumCellsX ) {
  						// Compute indexes
- 						int tileIndex = (gridX * TrainingParams.NumCellsY) + gridY;
+ 						int tileIndex = (gridX * Params.NumCellsY) + gridY;
  						int inputIndex = ((6-gridYCount)*7) + gridXCount + 3;  //((6-colCount)*7)+rowCount+1;
  						
  						// Check if cell is traversable

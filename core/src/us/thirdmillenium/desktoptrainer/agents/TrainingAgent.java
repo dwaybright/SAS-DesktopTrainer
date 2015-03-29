@@ -24,12 +24,12 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.neuroph.core.NeuralNetwork;
 
+import us.thirdmillenium.desktoptrainer.Params;
 import us.thirdmillenium.desktoptrainer.ai.tile.TileNode;
 import us.thirdmillenium.desktoptrainer.brains.Brain;
 import us.thirdmillenium.desktoptrainer.brains.NeuralNetworkBrain;
-import us.thirdmillenium.desktoptrainer.environment.GraphicsHelpers;
+import us.thirdmillenium.desktoptrainer.graphics.GraphicsHelpers;
 import us.thirdmillenium.desktoptrainer.environment.GreenBullet;
-import us.thirdmillenium.desktoptrainer.TrainingParams;
 
 import com.badlogic.gdx.ai.pfa.GraphPath;
 import com.badlogic.gdx.graphics.Texture;
@@ -45,7 +45,7 @@ import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 
 
-public class TrainingAgent {
+public class TrainingAgent extends AgentModel {
 	// Agent Position
 	private Vector2 position;
 	private float rotation;
@@ -96,7 +96,7 @@ public class TrainingAgent {
 		this.preferredPathIndex = 0;
 		
 		// Setup Sprite
-		this.sprite = new Sprite(new Texture(TrainingParams.TrainingAgentLivePNG));
+		this.sprite = new Sprite(new Texture(Params.TrainingAgentLivePNG));
 		this.sprite.setCenter(PixelX, PixelY);
 		this.sprite.rotate(this.rotation);
 		
@@ -112,7 +112,7 @@ public class TrainingAgent {
 		this.currentCellIndex = -1; //GraphicsHelpers.getCurrentCellIndex(PixelX, PixelY);
 	}
 	
-	
+	@Override
 	public void updateAgent(float deltaTime) {
 		// Vars
 		double[] inputs = new double[this.brain.getNumInputs()];
@@ -134,7 +134,7 @@ public class TrainingAgent {
 		while( bulletITR.hasNext() && count < 3 ) {
 			GreenBullet currBullet = bulletITR.next();
 			
-			if( this.position.dst(currBullet.getBulletVector()) < (TrainingParams.MapTileSize * 3) ) {
+			if( this.position.dst(currBullet.getBulletVector()) < (Params.MapTileSize * 3) ) {
 				Vector2 direction = currBullet.getBulletVector().cpy().sub(this.position).nor();
 				Vector2 unitVec = new Vector2(0,1);
 				
@@ -147,24 +147,24 @@ public class TrainingAgent {
 		inputs[2] = (count > 2) ? inputs[2] : 1;
 		
 		// Feed in the 7x7 array of values
-		int cellX = (int)(this.position.x / TrainingParams.MapTileSize);
-    	int cellY = (int)(this.position.y / TrainingParams.MapTileSize);
+		int cellX = (int)(this.position.x / Params.MapTileSize);
+    	int cellY = (int)(this.position.y / Params.MapTileSize);
     	
-		int currentCellIndex = (cellX * TrainingParams.NumCellsY) + cellY;
+		int currentCellIndex = (cellX * Params.NumCellsY) + cellY;
     	int gridYCount = 0;
     	int gridXCount = 0;    	
     	
 		// Compute from Bottom Left to Top Right - note that it is (Col,Row)
 		for( int gridY = cellY - 3; gridY <= cellY + 3; gridY++ ) {
 						
-			if( gridY >= 0 && gridY < TrainingParams.NumCellsY ) {
+			if( gridY >= 0 && gridY < Params.NumCellsY ) {
 				gridXCount = 0;
 				
 				for( int gridX = cellX - 3; gridX <= cellX + 3; gridX++ ) {
 					
-					if( gridX >= 0 && gridX < TrainingParams.NumCellsX ) {
+					if( gridX >= 0 && gridX < Params.NumCellsX ) {
 						// Compute indexes
-						int tileIndex = (gridX * TrainingParams.NumCellsY) + gridY;
+						int tileIndex = (gridX * Params.NumCellsY) + gridY;
 						int inputIndex = ((6-gridYCount)*7) + gridXCount + 3;  //((6-colCount)*7)+rowCount+1;
 						
 						// Check if cell is traversable
@@ -271,7 +271,7 @@ public class TrainingAgent {
 		//float deltaRot = getWeightedChange(rotation, TrainingParams.AgentRotationModArray) * TrainingParams.AgentMaxTurnAngle;
 		//this.rotation += getWeightedChange(rotation, TrainingParams.AgentRotationModArray) * TrainingParams.AgentMaxTurnAngle;
 
-        float angleChange = Math.max(-1, Math.min(1, sumArray(rotation))) * TrainingParams.AgentMaxTurnAngle;
+        float angleChange = Math.max(-1, Math.min(1, sumArray(rotation))) * Params.AgentMaxTurnAngle;
         this.rotation += angleChange;
 
 		if(this.rotation < 0   ) { this.rotation += 360; }
@@ -282,7 +282,7 @@ public class TrainingAgent {
 		// Collect wanted velocity, then change position accordingly
 		//float agentMovement = getWeightedChange(velocity, TrainingParams.AgentVelocityModArray) * TrainingParams.AgentMaxMovement;
 
-        float agentMovement = Math.max(-1, Math.min(1, sumArray(velocity))) * TrainingParams.AgentMaxMovement;
+        float agentMovement = Math.max(-1, Math.min(1, sumArray(velocity))) * Params.AgentMaxMovement;
 		
 		Vector2 newPosition = this.position.cpy().mulAdd((new Vector2(0,1)).rotate(this.rotation), agentMovement);
 		
@@ -318,13 +318,13 @@ public class TrainingAgent {
 				
 				// Increase score and next index that provides bonus
 				if( index >= this.preferredPathIndex ) {
-					this.score += TrainingParams.ScoreMoveToPrefPathTile;
+					this.score += Params.ScoreMoveToPrefPathTile;
 					this.preferredPathIndex = index + 1; 
 				}
 							
 			}
 			
-			this.score += TrainingParams.ScoreMoveNewTile;
+			this.score += Params.ScoreMoveNewTile;
 			
 			this.currentCellIndex = inThisCell;
 		}
@@ -342,14 +342,14 @@ public class TrainingAgent {
 		// Check World Map Boundaries First, just fudge back in if needed
 		if( boundRect.x < 0 ) {
 			newPosition.x += Math.abs((int)boundRect.x);
-		} else if( boundRect.x > (TrainingParams.MapTileSize * TrainingParams.NumCellsX) - (TrainingParams.AgentTileSize) ) {
-			newPosition.x = (float) ((TrainingParams.MapTileSize * TrainingParams.NumCellsX) - (TrainingParams.AgentTileSize));
+		} else if( boundRect.x > (Params.MapTileSize * Params.NumCellsX) - (Params.AgentTileSize) ) {
+			newPosition.x = (float) ((Params.MapTileSize * Params.NumCellsX) - (Params.AgentTileSize));
 		}
 		
 		if( boundRect.y < 0 ) {
 			newPosition.y += Math.abs((int)boundRect.y);
-		} else if( boundRect.y > (TrainingParams.MapTileSize * TrainingParams.NumCellsY) - (TrainingParams.AgentTileSize) ) {
-			newPosition.y = (float) ((TrainingParams.MapTileSize * TrainingParams.NumCellsY) - (TrainingParams.AgentTileSize));
+		} else if( boundRect.y > (Params.MapTileSize * Params.NumCellsY) - (Params.AgentTileSize) ) {
+			newPosition.y = (float) ((Params.MapTileSize * Params.NumCellsY) - (Params.AgentTileSize));
 		}
 		
 		// Check Walls Second		
@@ -426,17 +426,33 @@ public class TrainingAgent {
 		
 		return (float)weightedChange;		
 	}
-	
-	
-	/**
+
+
+    @Override
+    public void agentHit() {
+
+    }
+
+    /**
 	 * Draws Agent to supplied SpriteBatch.
 	 * @param sb
 	 */
+    @Override
 	public void drawAgent(SpriteBatch sb) {
 		this.sprite.draw(sb);
 	}
-	
-	/**
+
+    @Override
+    public void drawPath(ShapeRenderer sr) {
+        drawPreferredPath(sr);
+    }
+
+    @Override
+    public void drawVision(ShapeRenderer sr) {
+        return;
+    }
+
+    /**
 	 * Will output the preferred path as a line.
 	 * @param pathRender A ShapeRenderer
 	 */

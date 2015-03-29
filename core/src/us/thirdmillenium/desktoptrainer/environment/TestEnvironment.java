@@ -40,10 +40,11 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.neuroph.core.NeuralNetwork;
 
+import us.thirdmillenium.desktoptrainer.Params;
 import us.thirdmillenium.desktoptrainer.agents.TrainingAgent;
 import us.thirdmillenium.desktoptrainer.agents.TrainingShooter;
 import us.thirdmillenium.desktoptrainer.ai.tile.TileNode;
-import us.thirdmillenium.desktoptrainer.TrainingParams;
+import us.thirdmillenium.desktoptrainer.graphics.GraphicsHelpers;
 
 
 public class TestEnvironment extends Environment implements InputProcessor {
@@ -98,7 +99,7 @@ public class TestEnvironment extends Environment implements InputProcessor {
         this.camera.update();
 
         // Setup map asset
-        this.tiledMap = new TmxMapLoader().load(TrainingParams.TileMapsPath + "TestLevel" + testLevelID + ".tmx");
+        this.tiledMap = new TmxMapLoader().load(Params.TileMapsPath + "TestLevel" + testLevelID + ".tmx");
         this.tiledMapRenderer = new OrthogonalTiledMapRenderer(this.tiledMap);
         
         // Setup Trackers
@@ -126,9 +127,9 @@ public class TestEnvironment extends Environment implements InputProcessor {
 
     @Override
     public void simulate() {
-    	float deltaTime = (float) (1 / TrainingParams.FramesPerSecond);
+    	float deltaTime = (float) (1 / Params.FramesPerSecond);
     	
-    	for(int p = 0; p < TrainingParams.SimulationTimeSteps; p++ ) {
+    	for(int p = 0; p < Params.SimulationTimeSteps; p++ ) {
 	
 	        Iterator<TrainingShooter> shootItr = this.shooters.iterator();
 	        
@@ -177,7 +178,7 @@ public class TestEnvironment extends Environment implements InputProcessor {
 		        		// Make sure this is a Rectangle from Tiled describing a wall.
 			        	if( rectangleMapObject.getClass() == RectangleMapObject.class ) {
 			        		Rectangle wallRectangle = ((RectangleMapObject)rectangleMapObject).getRectangle();
-			        		Polygon polyBound = GraphicsHelpers.convertRectangleToPolygon(wallRectangle);	        		
+			        		Polygon polyBound = GraphicsHelpers.convertRectangleToPolygon(wallRectangle);
 			        		
 			        		// Terminate when hitting a wall
 			        		if( Intersector.overlapConvexPolygons(polyBound, currentBullet.getBulletPath())) {
@@ -208,6 +209,13 @@ public class TestEnvironment extends Environment implements InputProcessor {
         }
 
         return score;
+    }
+
+    @Override
+    public void dispose() {
+        this.mapNodeSR.dispose();
+        this.spriteBatchRenderer.dispose();
+        this.lineRenderer.dispose();
     }
 
 

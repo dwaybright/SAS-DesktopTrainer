@@ -36,7 +36,7 @@ public class DesktopTrainer extends ApplicationAdapter {
     public void create () {
         Random random = new Random();
 
-        this.MyEnvironment = new SinglePlayEnvironment(TrainingParams.PathToBaseNN, random, TestIndex);
+        this.MyEnvironment = new SinglePlayEnvironment(Params.PathToBaseNN, random, TestIndex);
     }
 
     @Override

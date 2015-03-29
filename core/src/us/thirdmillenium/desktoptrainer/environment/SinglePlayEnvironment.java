@@ -43,12 +43,13 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.neuroph.core.NeuralNetwork;
 
+import us.thirdmillenium.desktoptrainer.Params;
 import us.thirdmillenium.desktoptrainer.agents.PuppetAgent;
 import us.thirdmillenium.desktoptrainer.agents.TrainingAgent;
 import us.thirdmillenium.desktoptrainer.agents.TrainingShooter;
 import us.thirdmillenium.desktoptrainer.ai.tile.TileAStarPathFinder;
 import us.thirdmillenium.desktoptrainer.ai.tile.TileNode;
-import us.thirdmillenium.desktoptrainer.TrainingParams;
+import us.thirdmillenium.desktoptrainer.graphics.GraphicsHelpers;
 
 
 public class SinglePlayEnvironment extends Environment implements InputProcessor {
@@ -102,7 +103,7 @@ public class SinglePlayEnvironment extends Environment implements InputProcessor
         //Gdx.graphics.setDisplayMode((int)width, (int)height, false);
 
         // The test level to display
-        String levelPath = TrainingParams.TileMapsPath + "TestLevel" + testLevelID + ".tmx";
+        String levelPath = Params.TileMapsPath + "TestLevel" + testLevelID + ".tmx";
 
         // Setup camera
         this.Camera = new OrthographicCamera();
@@ -183,7 +184,7 @@ public class SinglePlayEnvironment extends Environment implements InputProcessor
     @Override
     public void simulate(float deltaTime) {
     	// Compute time delta (max of frame speed)
-    	deltaTime = (float) Math.min(deltaTime, 1 / TrainingParams.FramesPerSecond);
+    	deltaTime = (float) Math.min(deltaTime, 1 / Params.FramesPerSecond);
     	
     	if( DRAW ) {
 	    	// Clear Background
@@ -221,7 +222,7 @@ public class SinglePlayEnvironment extends Environment implements InputProcessor
             this.LineRenderer.setColor(Color.BLACK);
             
             if( PUPPET ) {
-            	this.puppet.drawLines(this.LineRenderer);
+            	this.puppet.drawPath(this.LineRenderer);
             }
             
             try{
@@ -242,7 +243,7 @@ public class SinglePlayEnvironment extends Environment implements InputProcessor
         this.SpriteBatchRenderer.begin();
         
         if( PUPPET ) {
-        	this.puppet.updateAgentState(deltaTime);
+        	this.puppet.updateAgent(deltaTime);
         	this.puppet.drawAgent(this.SpriteBatchRenderer);
         }
 
@@ -300,7 +301,7 @@ public class SinglePlayEnvironment extends Environment implements InputProcessor
 	        		// Make sure this is a Rectangle from Tiled describing a wall.
 		        	if( rectangleMapObject.getClass() == RectangleMapObject.class ) {
 		        		Rectangle wallRectangle = ((RectangleMapObject)rectangleMapObject).getRectangle();
-		        		Polygon polyBound = GraphicsHelpers.convertRectangleToPolygon(wallRectangle);	        		
+		        		Polygon polyBound = GraphicsHelpers.convertRectangleToPolygon(wallRectangle);
 		        		
 		        		// Terminate when hitting a wall
 		        		if( Intersector.overlapConvexPolygons(polyBound, currentBullet.getBulletPath())) {
@@ -354,6 +355,13 @@ public class SinglePlayEnvironment extends Environment implements InputProcessor
     @Override
     public long getScore() {
         return 0;
+    }
+
+    @Override
+    public void dispose() {
+        this.MapNodeSR.dispose();
+        this.SpriteBatchRenderer.dispose();
+        this.LineRenderer.dispose();
     }
 
 

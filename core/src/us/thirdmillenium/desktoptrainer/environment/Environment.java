@@ -21,7 +21,7 @@ import com.badlogic.gdx.ai.pfa.GraphPath;
 import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
 import com.badlogic.gdx.utils.Array;
 
-import us.thirdmillenium.desktoptrainer.TrainingParams;
+import us.thirdmillenium.desktoptrainer.Params;
 import us.thirdmillenium.desktoptrainer.ai.tile.TileNode;
 
 import java.util.concurrent.ConcurrentHashMap;
@@ -53,6 +53,12 @@ public abstract class Environment {
 
 
     /**
+     * This method disposes LibGDX Batch draw objects.
+     */
+    public abstract void dispose();
+
+
+    /**
      * Generates a mapping of all tiles that are traversable by an Agent.
      *
      * Pixel (16,16) actually matched Cell (0,0) now.
@@ -66,10 +72,10 @@ public abstract class Environment {
             Array<TileNode> myNodes = new Array<TileNode>();
             TileNode temp;
 
-            int tilePixel       = TrainingParams.MapTileSize;
-            int halfTilePixel   = TrainingParams.MapTileSize / 2;
-            int numCellY        = TrainingParams.NumCellsY;
-            int numCellX        = TrainingParams.NumCellsX;
+            int tilePixel       = Params.MapTileSize;
+            int halfTilePixel   = Params.MapTileSize / 2;
+            int numCellY        = Params.NumCellsY;
+            int numCellX        = Params.NumCellsX;
 
             // Step 1 : Collect all open tiles, create a TileNode for it, and add
 

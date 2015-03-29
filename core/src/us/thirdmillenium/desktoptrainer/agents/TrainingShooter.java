@@ -20,9 +20,10 @@ import java.util.Iterator;
 import java.util.Random;
 import java.util.Set;
 
-import us.thirdmillenium.desktoptrainer.environment.GraphicsHelpers;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import us.thirdmillenium.desktoptrainer.Params;
+import us.thirdmillenium.desktoptrainer.graphics.GraphicsHelpers;
 import us.thirdmillenium.desktoptrainer.environment.GreenBullet;
-import us.thirdmillenium.desktoptrainer.TrainingParams;
 
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Sprite;
@@ -31,7 +32,7 @@ import com.badlogic.gdx.math.Vector2;
 
 
 
-public class TrainingShooter {
+public class TrainingShooter extends AgentModel {
 	// Training Agents
 	private Set<TrainingAgent> trainees;
 	private Set<TrainingShooter> shooters;
@@ -61,19 +62,24 @@ public class TrainingShooter {
 		
 		
 		this.alive = true;
-		this.hits = TrainingParams.ShootingAgentHitPoints;
+		this.hits = Params.ShootingAgentHitPoints;
 		
-		this.deadPic = new Texture(TrainingParams.DeadAgentPNG);
-		this.sprite = new Sprite(new Texture(TrainingParams.ShootingAgentLivePNG));
+		this.deadPic = new Texture(Params.DeadAgentPNG);
+		this.sprite = new Sprite(new Texture(Params.ShootingAgentLivePNG));
 		this.sprite.setCenter(pixelX, pixelY);
 		
 		this.random = random;
 		this.timeSinceLastShot = 0;
 		this.canShoot = true;
 	}
-	
-	
-	/**
+
+
+    @Override
+    public void agentHit() {
+
+    }
+
+    /**
 	 * If Agent is alive, will scan surrounding for Trainee, and fire at it if not in cooldown.
 	 */
 	public void updateAgent(float timeDiff) {
@@ -81,7 +87,7 @@ public class TrainingShooter {
 		if( !this.canShoot ) {
 			this.timeSinceLastShot += timeDiff;
 			
-			if( this.timeSinceLastShot > TrainingParams.AgentFireRate) {
+			if( this.timeSinceLastShot > Params.AgentFireRate) {
 				this.timeSinceLastShot = 0;
 				this.canShoot = true;
 			} else {
@@ -99,7 +105,7 @@ public class TrainingShooter {
 				Vector2 traineePosition = trainee.getPosition();
 				
 				// Trainee in Range, Shoot it!
-				if( this.position.dst(traineePosition) < (TrainingParams.MapTileSize * 3) ) {
+				if( this.position.dst(traineePosition) < (Params.MapTileSize * 3) ) {
 					Vector2 direction = traineePosition.cpy().sub(this.position).nor();
 					Vector2 unitVec = new Vector2(0,1);
 					
@@ -123,7 +129,7 @@ public class TrainingShooter {
 	 * @return
 	 */
 	private float calcFireAngle(float angle) {
-		float change = TrainingParams.ShootingAgentFireAccuracy - (this.random.nextFloat() * (TrainingParams.ShootingAgentFireAccuracy * 2));
+		float change = Params.ShootingAgentFireAccuracy - (this.random.nextFloat() * (Params.ShootingAgentFireAccuracy * 2));
 		float fireAngle = angle + change;
 		
 		return fireAngle;
@@ -135,11 +141,26 @@ public class TrainingShooter {
 	 * @param sb
 	 */
 	public void drawAgent(SpriteBatch sb) {
-		this.sprite.draw(sb);
+        this.sprite.draw(sb);
 	}
-	
-	
-	/**
+
+    @Override
+    public void drawPath(ShapeRenderer sr) {
+
+    }
+
+    @Override
+    public void drawVision(ShapeRenderer sr) {
+
+    }
+
+    @Override
+    public Vector2 getPosition() {
+        return this.position;
+    }
+
+
+    /**
 	 * If hit, decrements hit counter.  If dead, changes photo and removes itself from Active Training Shooters hashset.
 	 */
 	public void hitByBullet() {

@@ -10,8 +10,12 @@ public class NeuralNetworkBrain extends Brain {
 	
 	
 	public NeuralNetworkBrain(NeuralNetwork nnet) {
-		this.myNN = nnet;
+        this.myNN = nnet;
 	}
+
+    public NeuralNetworkBrain(String nnetPath) {
+        this.myNN = NeuralNetwork.createFromFile(nnetPath);
+    }
 	
 	@Override
 	public double[] brainCrunch(double[] inputs) {

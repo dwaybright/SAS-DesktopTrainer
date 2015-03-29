@@ -33,30 +33,35 @@ public class FitnessWorkerThread implements Runnable {
         if(this.testEnviro1 != null) {
             this.testEnviro1.simulate();
             this.score += this.testEnviro1.getScore();
+            this.testEnviro1.dispose();
             this.testEnviro1 = null;
         }
 
         if(this.testEnviro2 != null) {
             this.testEnviro2.simulate();
             this.score += this.testEnviro2.getScore();
+            this.testEnviro2.dispose();
             this.testEnviro2 = null;
         }
 
         if(this.testEnviro3 != null) {
             this.testEnviro3.simulate();
             this.score += this.testEnviro3.getScore();
+            this.testEnviro3.dispose();
             this.testEnviro3 = null;
         }
 
         if(this.testEnviro4 != null) {
             this.testEnviro4.simulate();
             this.score += this.testEnviro4.getScore();
+            this.testEnviro4.dispose();
             this.testEnviro4 = null;
         }
 
         if(this.testEnviro5 != null) {
             this.testEnviro5.simulate();
             this.score += this.testEnviro5.getScore();
+            this.testEnviro5.dispose();
             this.testEnviro5 = null;
         }
 	}

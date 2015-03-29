@@ -9,10 +9,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import us.thirdmillenium.desktoptrainer.TrainingParams;
+import us.thirdmillenium.desktoptrainer.Params;
 
 
-public class FitnessScorer implements TrainingParams {
+public class FitnessScorer implements Params {
 	private ArrayList<Genome> GenomePopulation;
 	
 	
@@ -48,7 +48,7 @@ public class FitnessScorer implements TrainingParams {
 		
 		
 		// Create ThreadPool to compute each genome in parallel
-		ExecutorService executor = Executors.newFixedThreadPool(TrainingParams.NumThreads);
+		ExecutorService executor = Executors.newFixedThreadPool(Params.NumThreads);
 		
 		for(int i = 0; i < workers.size(); i++) {
 			executor.execute(workers.get(i));
