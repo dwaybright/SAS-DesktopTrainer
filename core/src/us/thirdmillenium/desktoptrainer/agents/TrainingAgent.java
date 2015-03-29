@@ -22,6 +22,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.badlogic.gdx.graphics.g2d.PolygonSpriteBatch;
 import org.neuroph.core.NeuralNetwork;
 
 import us.thirdmillenium.desktoptrainer.Params;
@@ -444,33 +445,30 @@ public class TrainingAgent extends AgentModel {
 
     @Override
     public void drawPath(ShapeRenderer sr) {
-        drawPreferredPath(sr);
+        // Draws the CurrentPath.
+        if( this.preferredPath != null) {
+            for (int i = this.preferredPathIndex + 1; i < this.preferredPath.getCount(); i++) {
+                sr.rectLine(this.preferredPath.get(i - 1).getPixelX(), this.preferredPath.get(i - 1).getPixelY(),
+                        this.preferredPath.get(i).getPixelX(), this.preferredPath.get(i).getPixelY(), 5);
+            }
+        }
     }
 
     @Override
     public void drawVision(ShapeRenderer sr) {
         return;
     }
-
-    /**
-	 * Will output the preferred path as a line.
-	 * @param pathRender A ShapeRenderer
-	 */
-	public void drawPreferredPath(ShapeRenderer pathRender) {
-		// Draws the CurrentPath.
-        if( this.preferredPath != null) {
-            for (int i = this.preferredPathIndex + 1; i < this.preferredPath.getCount(); i++) {
-            	pathRender.rectLine(this.preferredPath.get(i - 1).getPixelX(), this.preferredPath.get(i - 1).getPixelY(),
-                        			this.preferredPath.get(i).getPixelX(), this.preferredPath.get(i).getPixelY(), 5);
-            }
-        }
-	}
 	
 	
 	public int getTraverseNodeIndex() {
 		return GraphicsHelpers.getCurrentCellIndex((int)this.position.x, (int)this.position.y);
 	}
 	
-	
+	@Override
 	public Vector2 getPosition() { return this.position; }
+
+    @Override
+    public Rectangle getBoundingRectangle() {
+        return this.sprite.getBoundingRectangle();
+    }
 }

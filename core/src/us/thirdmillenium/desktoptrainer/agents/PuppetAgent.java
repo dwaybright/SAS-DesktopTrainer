@@ -19,10 +19,12 @@ package us.thirdmillenium.desktoptrainer.agents;
 import com.badlogic.gdx.ai.pfa.DefaultGraphPath;
 import com.badlogic.gdx.ai.pfa.GraphPath;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.PolygonSpriteBatch;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.maps.tiled.TiledMap;
+import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 
 import java.io.File;
@@ -462,5 +464,12 @@ public class PuppetAgent extends AgentModel {
 				this.currPathNodeTracker.add(tile);
 			}
 		}
+    }
+
+
+
+    @Override
+    public Rectangle getBoundingRectangle() {
+        return this.Sprite.getBoundingRectangle();
     }
 }

@@ -18,9 +18,13 @@ limitations under the License.
 package us.thirdmillenium.desktoptrainer.agents;
 
 
+import com.badlogic.gdx.ai.pfa.GraphPath;
+import com.badlogic.gdx.graphics.g2d.PolygonSpriteBatch;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
+import us.thirdmillenium.desktoptrainer.ai.tile.TileNode;
 
 /**
  * The AgentModel class is extended by all actual Agents to be made.
@@ -66,5 +70,19 @@ public abstract class AgentModel {
     public abstract void drawVision(ShapeRenderer sr);
 
 
+    /**
+     * Returns a Vector2 for the position Agent is centered on.
+     *
+     * @return
+     */
     public abstract Vector2 getPosition();
+
+
+    /**
+     * Returns the Bounding Rectangle for this Agent.
+     *
+     * @return
+     */
+    public abstract Rectangle getBoundingRectangle();
+
 }

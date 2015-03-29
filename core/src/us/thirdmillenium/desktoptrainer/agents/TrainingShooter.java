@@ -21,6 +21,7 @@ import java.util.Random;
 import java.util.Set;
 
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.math.Rectangle;
 import us.thirdmillenium.desktoptrainer.Params;
 import us.thirdmillenium.desktoptrainer.graphics.GraphicsHelpers;
 import us.thirdmillenium.desktoptrainer.environment.GreenBullet;
@@ -62,7 +63,7 @@ public class TrainingShooter extends AgentModel {
 		
 		
 		this.alive = true;
-		this.hits = Params.ShootingAgentHitPoints;
+		this.hits = Params.EnemyAgentHitPoints;
 		
 		this.deadPic = new Texture(Params.DeadAgentPNG);
 		this.sprite = new Sprite(new Texture(Params.ShootingAgentLivePNG));
@@ -175,4 +176,9 @@ public class TrainingShooter extends AgentModel {
 	public int getTraverseNodeIndex() {
 		return GraphicsHelpers.getCurrentCellIndex((int)this.position.x, (int)this.position.y);
 	}
+
+    @Override
+    public Rectangle getBoundingRectangle() {
+        return this.sprite.getBoundingRectangle();
+    }
 }

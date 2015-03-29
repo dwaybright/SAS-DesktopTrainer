@@ -157,7 +157,10 @@ public interface Params {
 
 
     /** Shooting Agent hit points */
-    static final short ShootingAgentHitPoints = 2;
+    static final short EnemyAgentHitPoints = 2;
+
+    /** Shooting Agent hit points */
+    static final short TeamAgentHitPoints = 200;
 
     /** Shooting Agent Accuracy */
     static final float ShootingAgentFireAccuracy = 30f;
