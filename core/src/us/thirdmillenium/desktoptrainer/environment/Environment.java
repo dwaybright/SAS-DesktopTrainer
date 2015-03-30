@@ -22,15 +22,12 @@ import com.badlogic.gdx.maps.MapObjects;
 import com.badlogic.gdx.maps.objects.RectangleMapObject;
 import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
-import com.badlogic.gdx.math.Intersector;
-import com.badlogic.gdx.math.Polygon;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
 
 import us.thirdmillenium.desktoptrainer.Params;
 import us.thirdmillenium.desktoptrainer.ai.tile.TileNode;
-import us.thirdmillenium.desktoptrainer.graphics.GraphicsHelpers;
 import us.thirdmillenium.desktoptrainer.graphics.Line;
 
 import java.util.Collections;
@@ -69,6 +66,12 @@ public abstract class Environment {
     public abstract void dispose();
 
 
+    /**
+     * Generates a set of all lines describing collisions in the game map.
+     *
+     * @param gameMap
+     * @return
+     */
     public static Set<Line> createCollisionLineSet(TiledMap gameMap) {
         Set<Line> collisionSet = Collections.newSetFromMap(new ConcurrentHashMap<Line, Boolean>());
 

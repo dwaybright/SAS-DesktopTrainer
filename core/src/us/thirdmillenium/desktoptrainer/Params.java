@@ -41,7 +41,7 @@ public interface Params {
     static final String PathToBaseNN    = "core/docs/BaseANNs/MLP3_TanH_Level2.nnet";
 
     /** Path to the Training CSVs */
-    static final String PathToCSV       = "core/docs/TrainingCSVs/trainingCSV2.csv";
+    static final String PathToCSV       = "core/docs/TrainingCSVs/trainingCSV3.csv";
 
     /** The number of Genomes to have each generation. */
     static final int NumGenomes = 1000;

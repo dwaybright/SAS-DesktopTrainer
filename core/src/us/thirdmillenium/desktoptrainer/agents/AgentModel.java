@@ -46,12 +46,28 @@ public abstract class AgentModel {
     public abstract void updateAgent(float deltaTime);
 
 
+    /**
+     * Set the preferred path for an Agent.
+     *
+     * @param goalX
+     * @param goalY
+     */
     public abstract void setPathToGoal(float goalX, float goalY);
 
 
+    /**
+     * Collect what Tile Cell the Agent is on.
+     *
+     * @return
+     */
     public abstract int getTraverseNodeIndex();
 
 
+    /**
+     * Return the score this Agent has achieved.
+     *
+     * @return
+     */
     public abstract long getScore();
 
 

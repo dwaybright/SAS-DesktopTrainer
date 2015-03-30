@@ -16,9 +16,11 @@ limitations under the License.
 
 package us.thirdmillenium.desktoptrainer.agents;
 
+import com.badlogic.gdx.ai.pfa.DefaultGraphPath;
 import com.badlogic.gdx.ai.pfa.GraphPath;
 import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.graphics.g2d.*;
+import com.badlogic.gdx.graphics.g2d.Sprite;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.maps.MapObjects;
 import com.badlogic.gdx.maps.objects.RectangleMapObject;
@@ -29,19 +31,26 @@ import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 
 import us.thirdmillenium.desktoptrainer.Params;
+import us.thirdmillenium.desktoptrainer.ai.tile.TileAStarPathFinder;
+import us.thirdmillenium.desktoptrainer.ai.tile.TileHeuristic;
 import us.thirdmillenium.desktoptrainer.ai.tile.TileNode;
 import us.thirdmillenium.desktoptrainer.brains.Brain;
 import us.thirdmillenium.desktoptrainer.brains.NeuralNetworkBrain;
-import us.thirdmillenium.desktoptrainer.graphics.GraphicsHelpers;
 import us.thirdmillenium.desktoptrainer.environment.GreenBullet;
+import us.thirdmillenium.desktoptrainer.graphics.GraphicsHelpers;
 import us.thirdmillenium.desktoptrainer.graphics.Line;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.PrintWriter;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 
-public class ConeAgent extends AgentModel {
+public class ConePuppetAgent extends AgentModel {
     // Environment Trackers
     private TiledMap gameMap;
     private Set<GreenBullet> bulletTracker;
@@ -51,9 +60,15 @@ public class ConeAgent extends AgentModel {
 
     // Agent Position Information
     private Sprite sprite;
-    private GraphPath<TileNode> preferredPath;
     private Vector2 position;
     private float rotation;
+
+    // Agent Preferred Path
+    private TileAStarPathFinder pathFinder;
+    private ConcurrentHashMap<Integer, TileNode> mapNodes;
+    private GraphPath<TileNode> preferredPath;
+    private HashSet<TileNode> preferredPathNodeTracker;
+    private int preferredPathIndex;
 
     // Agent Vision
     private int degreesOfView;      // How many degrees I can see ahead of me
@@ -64,6 +79,8 @@ public class ConeAgent extends AgentModel {
     private int health;
 
     // Last Computed Information
+    private File csvFile;
+    private boolean writeDataToFile;
     private Brain brain;
     private double[] input;
     private double[] output;
@@ -73,15 +90,20 @@ public class ConeAgent extends AgentModel {
     private Random random;
 
 
-    public ConeAgent(Vector2 startPosition, float startAngle, int degreesOfView, int visionDepth, int health, String spritePNG,
-                     Random random, Set<Line> collisionLines, String nnetPath, GraphPath<TileNode> prefPath,
+    public ConePuppetAgent(Vector2 startPosition, float startAngle, int degreesOfView, int visionDepth, int health, String spritePNG, boolean writeDataToFile,
+                     Random random, Set<Line> collisionLines, String nnetPath, GraphPath<TileNode> prefPath, ConcurrentHashMap<Integer, TileNode> mapNodes,
                      TiledMap gameMap, Set<AgentModel> team, Set<AgentModel> enemies, Set<GreenBullet> bullets) {
 
         // Agent Position and Movement Config
         this.brain = new NeuralNetworkBrain(nnetPath);
-        this.preferredPath = prefPath;
         this.position = startPosition;
         this.rotation = startAngle;
+
+        // Agent Preferred Path
+        this.pathFinder = new TileAStarPathFinder();
+        this.mapNodes = mapNodes;
+        this.preferredPath = prefPath;
+        this.preferredPathIndex = 0;
 
         // Agent Vision Config
         this.visionPolygonVertices = new float[(1 + this.degreesOfView) * 2];
@@ -103,6 +125,10 @@ public class ConeAgent extends AgentModel {
         this.enemyTracker = enemies;
         this.teamTracker = team;
         this.collisionLines = collisionLines;
+
+        // Writing Training Data
+        this.writeDataToFile = writeDataToFile;
+        if( writeDataToFile ) { this.csvFile = new File(Params.PathToCSV); }
 
         // Other information
         this.random = random;
@@ -130,17 +156,81 @@ public class ConeAgent extends AgentModel {
 
             // Update Agent Position and Rotation
             updatePosition(output);
+
+            // Write out training data
+            if(this.writeDataToFile) { writeTrainingData(); }
+        }
+    }
+
+    /**
+     *  Write out a Frame of training data.
+     */
+    private void writeTrainingData() {
+        PrintWriter csvWriter = null;
+
+        try{
+            // Use if currently exists or create fresh file
+            if( !this.csvFile.exists() ) {
+                this.csvFile.createNewFile();
+            }
+
+            // Write out to file
+            csvWriter = new PrintWriter(new FileOutputStream(this.csvFile), true);
+
+            for(int i = 0; i < this.input.length; i++ ) {
+                csvWriter.print( this.input[i] );
+                csvWriter.print( "," );
+            }
+
+            for(int i = 0; i < this.output.length; i++) {
+                csvWriter.print( this.output[i] );
+                csvWriter.print( "," );
+            }
+
+            csvWriter.println();
+
+        } catch (Exception ex) {
+
+        } finally {
+            if( csvWriter != null ) { csvWriter.close(); }
         }
     }
 
     @Override
     public void setPathToGoal(float goalX, float goalY) {
+        // Reset Index Tracker
+        this.preferredPathIndex = 1;
 
+        // Start and Goal node
+        TileNode startNode = GraphicsHelpers.findTileNodeByPixelLocation((int)this.position.x, (int)this.position.y, this.mapNodes);
+        TileNode endNode   = GraphicsHelpers.findTileNodeByPixelLocation((int)goalX, (int)goalY, this.mapNodes);
+
+        // The returned path once computed
+        this.preferredPath = new DefaultGraphPath<TileNode>();
+
+        // Compute Path!
+        this.pathFinder.searchNodePath(startNode, endNode, new TileHeuristic(), this.preferredPath);
+
+        this.preferredPath.reverse();
+
+        // Node Tracker
+        Iterator<TileNode> itr = this.preferredPath.iterator();
+        this.preferredPathNodeTracker = new HashSet<TileNode>(300);
+
+        while(itr.hasNext()) {
+            TileNode tile = itr.next();
+
+            if( this.preferredPathNodeTracker.contains(tile) ) {
+                itr.remove();
+            } else {
+                this.preferredPathNodeTracker.add(tile);
+            }
+        }
     }
 
     @Override
     public int getTraverseNodeIndex() {
-        return GraphicsHelpers.getCurrentCellIndex((int)this.position.x, (int)this.position.y);
+        return GraphicsHelpers.getCurrentCellIndex((int) this.position.x, (int) this.position.y);
     }
 
 
@@ -346,7 +436,7 @@ public class ConeAgent extends AgentModel {
      */
     private Vector2 boundaryCheckNewPosition(Vector2 newPosition) {
         Rectangle boundRect = this.sprite.getBoundingRectangle();
-        Polygon   boundPoly = GraphicsHelpers.convertRectangleToPolygon(boundRect);
+        Polygon boundPoly = GraphicsHelpers.convertRectangleToPolygon(boundRect);
 
         /*
          *  Check World Map Boundaries First, just fudge back in if needed
@@ -401,9 +491,9 @@ public class ConeAgent extends AgentModel {
             // If bounding rectangles overlap, shuffle Agent in X to keep from overlapping
             if( Intersector.intersectRectangles(boundRect, enemy.getBoundingRectangle(), intersection) ) {
                 if( boundRect.x >= intersection.x ) {
-                    newPosition.x += intersection.x + 0.001f;
+                    newPosition.x += intersection.x;
                 } else {
-                    newPosition.x -= intersection.x - 0.001f;
+                    newPosition.x -= intersection.x;
                 }
             }
         }
@@ -418,9 +508,9 @@ public class ConeAgent extends AgentModel {
             // If bounding rectangles overlap, shuffle Agent
             if( Intersector.intersectRectangles(boundRect, team.getBoundingRectangle(), intersection) ) {
                 if( boundRect.x >= intersection.x ) {
-                    newPosition.x += intersection.x + 0.001f;
+                    newPosition.x += intersection.x;
                 } else {
-                    newPosition.x -= intersection.x - 0.001f;
+                    newPosition.x -= intersection.x;
                 }
             }
         }

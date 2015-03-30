@@ -44,7 +44,7 @@ public class TrainingShooter extends AgentModel {
 	
 	// Shooter State
 	private boolean alive;
-	private short hits;
+	private int health;
 	private Random random;
 	private double timeSinceLastShot;
 	private boolean canShoot;
@@ -63,7 +63,7 @@ public class TrainingShooter extends AgentModel {
 		
 		
 		this.alive = true;
-		this.hits = Params.EnemyAgentHitPoints;
+		this.health = Params.EnemyAgentHitPoints;
 		
 		this.deadPic = new Texture(Params.DeadAgentPNG);
 		this.sprite = new Sprite(new Texture(Params.ShootingAgentLivePNG));
@@ -173,7 +173,7 @@ public class TrainingShooter extends AgentModel {
 	 * If hit, decrements hit counter.  If dead, changes photo and removes itself from Active Training Shooters hashset.
 	 */
 	public void hitByBullet() {
-		if((--this.hits) < 1 ) {
+		if((--this.health) < 1 ) {
 			this.alive = false;
 			this.sprite = new Sprite(this.deadPic);
 			this.shooters.remove(this);
