@@ -95,7 +95,7 @@ public class ConePuppetAgent extends AgentModel {
                      TiledMap gameMap, Set<AgentModel> team, Set<AgentModel> enemies, Set<GreenBullet> bullets) {
 
         // Agent Position and Movement Config
-        this.brain = new NeuralNetworkBrain(nnetPath);
+        //this.brain = new NeuralNetworkBrain(nnetPath);
         this.position = startPosition;
         this.rotation = startAngle;
 
@@ -148,14 +148,16 @@ public class ConePuppetAgent extends AgentModel {
     @Override
     public void updateAgent(float deltaTime) {
         if( this.ALIVE ) {
+            computeVision();
+
             // Compute the distance and item seen
-            this.input = computeVision();
+            //this.input = computeVision();
 
             // Brain Crunch!
-            this.output = this.brain.brainCrunch(this.input);
+            //this.output = this.brain.brainCrunch(this.input);
 
             // Update Agent Position and Rotation
-            updatePosition(output);
+            //updatePosition(output);
 
             // Write out training data
             if(this.writeDataToFile) { writeTrainingData(); }
@@ -238,11 +240,15 @@ public class ConePuppetAgent extends AgentModel {
      * Computes distance and what is seen for each degree of viewing angle.
      *
      */
-    private double[] computeVision() {
+    //private double[] computeVision() {
+    private void computeVision() {
         double[] item = new double[this.degreesOfView];
         double[] distance = new double[this.degreesOfView];
         float startDeg = this.rotation + (this.degreesOfView / 2);
         float degree = 0;
+
+        boolean seenEnemyAgent = false;
+        float degreeSeenEnemyAgent = -1;
 
         // Store the first point for the vision Polygon
         this.visionPolygonVertices[0] = this.position.x;
@@ -293,6 +299,9 @@ public class ConePuppetAgent extends AgentModel {
                         item[i] = Params.ConeVisEnemy;
                         distance[i] = distToObject;
                         seenAgent = true;
+
+                        seenEnemyAgent = true;
+                        degreeSeenEnemyAgent = degree;
                     }
                 }
             }
@@ -364,16 +373,36 @@ public class ConePuppetAgent extends AgentModel {
             distance[i] = distance[i] / (float)this.visionDepth;
         }
 
-        return GraphicsHelpers.interleaveDoubleArrays(item, distance);
+        //return GraphicsHelpers.interleaveDoubleArrays(item, distance);
+        this.input = GraphicsHelpers.interleaveDoubleArrays(item, distance);
+
+        // Update Position
+        updatePosition(seenEnemyAgent, degreeSeenEnemyAgent);
     }
 
 
     /**
      * This method takes the output from the Brain, and moves Agent / shoots weapon.
      *
-     * @param output from a Brain
      */
-    private void updatePosition(double[] output) {
+    private void updatePosition(boolean seenEnemyAgent, float degreeSeenEnemyAgent) {
+
+        // Determine Velocity, Rotation, and Shooting
+        if( seenEnemyAgent ) {
+            this.output[1] = 0.2;  // Do NOT move
+
+            if( Math.abs(this.rotation - degreeSeenEnemyAgent) >= Params.AgentMaxTurnAngle) {
+                this.output[0] = (this.rotation - degreeSeenEnemyAgent) < 0 ? 0 : 1;
+                this.output[2] = 0;  // Don't shoot!  Enemy isn't in front yet.
+            } else {
+                this.output[0] = ((this.rotation - degreeSeenEnemyAgent) / Params.AgentMaxTurnAngle) + 0.5f;
+                this.output[2] = 1;  // Can see the enemy.  Shoot!
+            }
+        } else {
+            // Point toward next Path Node
+            
+        }
+
         // Compute Angle Change  ( -1 Hard Counter Clockwise, +1 Hard Clockwise, 0 is no rotation )
         float angleChange = (float)(2 * (0.5 - output[0]) * Params.AgentMaxTurnAngle);
         this.rotation += angleChange;
