@@ -77,6 +77,8 @@ public class ConePuppetAgent extends AgentModel {
     // Agent Health
     private boolean ALIVE;
     private int health;
+    private boolean dangerOverride;
+    private int dangerCoolDown;
 
     // Last Computed Information
     private File csvFile;
@@ -91,8 +93,8 @@ public class ConePuppetAgent extends AgentModel {
 
 
     public ConePuppetAgent(Vector2 startPosition, float startAngle, int degreesOfView, int visionDepth, int health, String spritePNG, boolean writeDataToFile,
-                     Random random, Set<Line> collisionLines, String nnetPath, GraphPath<TileNode> prefPath, ConcurrentHashMap<Integer, TileNode> mapNodes,
-                     TiledMap gameMap, Set<AgentModel> team, Set<AgentModel> enemies, Set<GreenBullet> bullets) {
+                     Random random, Set<Line> collisionLines, GraphPath<TileNode> prefPath, HashSet<TileNode> preferredPathNodeTracker,
+                     ConcurrentHashMap<Integer, TileNode> mapNodes, TiledMap gameMap, Set<AgentModel> team, Set<AgentModel> enemies, Set<GreenBullet> bullets) {
 
         // Agent Position and Movement Config
         //this.brain = new NeuralNetworkBrain(nnetPath);
@@ -103,16 +105,19 @@ public class ConePuppetAgent extends AgentModel {
         this.pathFinder = new TileAStarPathFinder();
         this.mapNodes = mapNodes;
         this.preferredPath = prefPath;
+        this.preferredPathNodeTracker = preferredPathNodeTracker;
         this.preferredPathIndex = 0;
 
         // Agent Vision Config
-        this.visionPolygonVertices = new float[(1 + this.degreesOfView) * 2];
         this.degreesOfView = degreesOfView;
         this.visionDepth = visionDepth;
+        this.visionPolygonVertices = new float[(1 + this.degreesOfView) * 2];
 
         // Agent Health
         this.ALIVE = true;
         this.health = health;
+        this.dangerOverride = false;
+        this.dangerCoolDown = 0;
 
         // Agent Sprite Config
         this.sprite = new Sprite(new Texture(spritePNG));
@@ -141,6 +146,10 @@ public class ConePuppetAgent extends AgentModel {
         if( (--this.health) < 1 ) {
             this.ALIVE = false;
             this.sprite = new Sprite(new Texture(Params.DeadAgentPNG));
+        } else {
+            // Run!!!
+            this.dangerOverride = true;
+            this.dangerCoolDown = 5;
         }
     }
 
@@ -150,14 +159,7 @@ public class ConePuppetAgent extends AgentModel {
         if( this.ALIVE ) {
             computeVision();
 
-            // Compute the distance and item seen
-            //this.input = computeVision();
-
-            // Brain Crunch!
-            //this.output = this.brain.brainCrunch(this.input);
-
-            // Update Agent Position and Rotation
-            //updatePosition(output);
+            updatePosition();
 
             // Write out training data
             if(this.writeDataToFile) { writeTrainingData(); }
@@ -314,7 +316,7 @@ public class ConePuppetAgent extends AgentModel {
                 team = teamItr.next();
 
                 // If segment intersects circle
-                if( Intersector.intersectSegmentCircle(this.position, endPoint, team.getPosition(), Params.AgentRadiusSquared) ) {
+                if( team != this && Intersector.intersectSegmentCircle(this.position, endPoint, team.getPosition(), Params.AgentRadiusSquared) ) {
                     distToObject = this.position.dst(team.getPosition()) - (Params.AgentTileSize / 2);
 
                     // Check if Agents are within Vision Depth
@@ -333,8 +335,10 @@ public class ConePuppetAgent extends AgentModel {
             while(lineItr.hasNext()) {
                 line = lineItr.next();
 
-                if( Intersector.intersectLines(this.position, endPoint, line.start, line.end, intersection) ) {
+                if( Intersector.intersectSegments(this.position, endPoint, line.start, line.end, intersection) ) {
                     distToObject = intersection.dst(this.position);
+
+                    //float tempAngle = this.position.angle(intersection);
 
                     if( distToObject < distance[i] ) {
                         item[i] = Params.ConeVisWall;
@@ -375,9 +379,21 @@ public class ConePuppetAgent extends AgentModel {
 
         //return GraphicsHelpers.interleaveDoubleArrays(item, distance);
         this.input = GraphicsHelpers.interleaveDoubleArrays(item, distance);
+        this.output = new double[3];
+
+        // Check Danger Information
+        if( (this.dangerCoolDown--) < 1 ) {
+            this.dangerOverride = false;
+        }
 
         // Update Position
-        updatePosition(seenEnemyAgent, degreeSeenEnemyAgent);
+        if( this.dangerOverride && !seenEnemyAgent ) {      // Being shot and don't see enemy Agent
+            this.output[0] = 0.5;  // no rotate
+            this.output[1] = 1;    // Move fast as hell
+            this.output[2] = 0;    // Don't shoot
+        } else {
+            puppetCrunch(seenEnemyAgent, degreeSeenEnemyAgent, distance, item);
+        }
     }
 
 
@@ -385,23 +401,125 @@ public class ConePuppetAgent extends AgentModel {
      * This method takes the output from the Brain, and moves Agent / shoots weapon.
      *
      */
-    private void updatePosition(boolean seenEnemyAgent, float degreeSeenEnemyAgent) {
+    private void puppetCrunch(boolean seenEnemyAgent, float degreeSeenEnemyAgent, double[] distance, double[] item) {
+        double rightHighItem = 0, leftHighItem = 0, highItem = 0;
+        int rightHighItemIndex = 0, leftHighItemIndex = 0, highItemIndex = 0;
 
-        // Determine Velocity, Rotation, and Shooting
-        if( seenEnemyAgent ) {
-            this.output[1] = 0.2;  // Do NOT move
-
-            if( Math.abs(this.rotation - degreeSeenEnemyAgent) >= Params.AgentMaxTurnAngle) {
-                this.output[0] = (this.rotation - degreeSeenEnemyAgent) < 0 ? 0 : 1;
-                this.output[2] = 0;  // Don't shoot!  Enemy isn't in front yet.
-            } else {
-                this.output[0] = ((this.rotation - degreeSeenEnemyAgent) / Params.AgentMaxTurnAngle) + 0.5f;
-                this.output[2] = 1;  // Can see the enemy.  Shoot!
+        // Figure out the highest item seen (enemy is 1, path node is 0.75), closest to degree 0 line
+        for (int i = (item.length / 2); i >= 0; i--) {
+            if (leftHighItem < item[i]) {
+                leftHighItem = item[i];
+                leftHighItemIndex = i;
             }
-        } else {
-            // Point toward next Path Node
-            
         }
+
+        for (int i = (item.length / 2) + 1; i < item.length; i++) {
+            if (rightHighItem < item[i]) {
+                rightHighItem = item[i];
+                rightHighItemIndex = i;
+            }
+        }
+
+        // highItem = Math.max(leftHighItem, rightHighItem);
+        // highItemIndex = (leftHighItem >= rightHighItem) ? leftHighItemIndex : rightHighItemIndex;
+
+        // Choose highest item in core direction
+        if ((item.length - rightHighItemIndex) < ((item.length / 2) - leftHighItemIndex)) {
+            highItem = rightHighItem;
+            highItemIndex = rightHighItemIndex;
+        } else {
+            highItem = leftHighItem;
+            highItemIndex = leftHighItemIndex;
+        }
+
+        // Set shooting to 0 (only one place it should be 1)
+        this.output[2] = 0;
+
+        if( seenEnemyAgent ) {
+            this.output[2] = 0;
+        }
+
+
+        if (highItem > 0.9) {                          // Enemy
+            // Rotate toward the enemy
+            float angleChange = (this.degreesOfView / 2) - highItemIndex;
+
+            if (Math.abs(angleChange) > Params.AgentMaxTurnAngle) {
+                this.output[0] = angleChange < 0 ? 0 : 1;
+
+                // Change speed?  But stay slow.  (Scaredy-cat mode would be run?)
+                this.output[1] = 0.25;  // Remember, 0.2 means 0 velocity
+            } else {
+                this.output[0] = ((this.rotation + angleChange) / Params.AgentMaxTurnAngle) + 0.5f;
+
+                // Don't move!
+                this.output[1] = 0.2;
+
+                // Shoot!!!
+                this.output[2] = 1;
+            }
+        } else if (highItem > 0.7) {                       // Path Node  OR Follow Team Member
+            // Rotate toward the path nod
+            float angleChange = (this.degreesOfView / 2) - highItemIndex;
+
+            if (Math.abs(angleChange) > Params.AgentMaxTurnAngle) {
+                this.output[0] = angleChange < 0 ? 0 : 1;
+
+                // Big turn!  Small Backward step
+                this.output[1] = 0.18;  // Remember, 0.2 means 0 velocity
+            } else {
+                this.output[0] = ((this.rotation + angleChange) / Params.AgentMaxTurnAngle) + 0.5f;
+
+                this.output[1] = (-3.5 * Math.pow(this.output[0] - 0.5, 2)) + 0.8;
+            }
+
+        } else if (highItem > 0.2 && highItem < 0.3) {       // Wall
+            double leftMostDistant = 0, rightMostDistant = 0, mostDistant = 0;
+            int leftMostDistantIndex = 0, rightMostDistantIndex = 0, mostDistantIndex = 0;
+
+            // Determine the degree line with the greatest distance, and its index.
+            for (int i = distance.length / 2; i >= 0; i--) {
+                if (distance[i] > leftMostDistant) {
+                    leftMostDistant = distance[i];
+                    leftMostDistantIndex = i;
+                }
+            }
+
+            for (int i = (distance.length / 2) + 1; i < distance.length; i++) {
+                if (rightMostDistant > distance[i]) {
+                    rightMostDistant = item[i];
+                    rightMostDistantIndex = i;
+                }
+            }
+
+            mostDistant = (leftMostDistant < rightMostDistant) ? rightMostDistant : leftMostDistant;
+            mostDistantIndex = (leftMostDistant < rightMostDistant) ? rightMostDistantIndex : leftMostDistantIndex;
+
+            // Rotate toward the most open degree line
+            float angleChange = (this.degreesOfView / 2) - mostDistantIndex;
+
+            // Corner check
+            if (leftMostDistant < (Params.AgentTileSize + 5) / this.visionDepth && rightMostDistant < (Params.AgentTileSize + 5) / this.visionDepth) {
+                this.output[0] = 0;  // Hard counter-clockwise
+                this.output[1] = 0;  // Hard backwards
+            } else if (Math.abs(angleChange) > Params.AgentMaxTurnAngle) {
+                // Big turn!  Keep forward though
+                this.output[0] = angleChange < 0 ? 0 : 1;
+                this.output[1] = 0.25;  // Remember, 0.2 means 0 velocity
+            } else {
+                // Small Turn
+                this.output[0] = ((angleChange / (this.degreesOfView / 2)) / 2) + 0.5f; // ((this.rotation + angleChange) / Params.AgentMaxTurnAngle) + 0.5f;
+                this.output[1] = (-2.2 * Math.pow(this.output[0] - 0.5, 2)) + 0.8;
+            }
+
+        } else {                            // Only see wide open space
+            this.output[0] = 0.5;  // Go straight
+            this.output[1] = 1;    // Go as fast as possible
+        }
+
+    }
+
+    public void updatePosition() {
 
         // Compute Angle Change  ( -1 Hard Counter Clockwise, +1 Hard Clockwise, 0 is no rotation )
         float angleChange = (float)(2 * (0.5 - output[0]) * Params.AgentMaxTurnAngle);
@@ -535,7 +653,7 @@ public class ConePuppetAgent extends AgentModel {
             team = teamItr.next();
 
             // If bounding rectangles overlap, shuffle Agent
-            if( Intersector.intersectRectangles(boundRect, team.getBoundingRectangle(), intersection) ) {
+            if( team != this && Intersector.intersectRectangles(boundRect, team.getBoundingRectangle(), intersection) ) {
                 if( boundRect.x >= intersection.x ) {
                     newPosition.x += intersection.x;
                 } else {

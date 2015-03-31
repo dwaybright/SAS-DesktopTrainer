@@ -105,7 +105,7 @@ public class TrainingShooter extends AgentModel {
 			Iterator<AgentModel> itr = this.trainees.iterator();
 			
 			while(itr.hasNext()) {
-				TrainingAgent trainee = (TrainingAgent)itr.next();
+				AgentModel trainee = itr.next();
 				Vector2 traineePosition = trainee.getPosition();
 				
 				// Trainee in Range, Shoot it!

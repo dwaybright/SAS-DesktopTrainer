@@ -18,6 +18,7 @@ package us.thirdmillenium.desktoptrainer.environment;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.InputProcessor;
+import com.badlogic.gdx.ai.pfa.DefaultGraphPath;
 import com.badlogic.gdx.ai.pfa.GraphPath;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
@@ -35,19 +36,14 @@ import com.badlogic.gdx.math.Intersector;
 import com.badlogic.gdx.math.Polygon;
 import com.badlogic.gdx.math.Rectangle;
 
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.Random;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.badlogic.gdx.math.Vector2;
 import org.neuroph.core.NeuralNetwork;
 
 import us.thirdmillenium.desktoptrainer.Params;
-import us.thirdmillenium.desktoptrainer.agents.AgentModel;
-import us.thirdmillenium.desktoptrainer.agents.PuppetAgent;
-import us.thirdmillenium.desktoptrainer.agents.TrainingAgent;
-import us.thirdmillenium.desktoptrainer.agents.TrainingShooter;
+import us.thirdmillenium.desktoptrainer.agents.*;
 import us.thirdmillenium.desktoptrainer.ai.tile.TileAStarPathFinder;
 import us.thirdmillenium.desktoptrainer.ai.tile.TileNode;
 import us.thirdmillenium.desktoptrainer.graphics.GraphicsHelpers;
@@ -178,9 +174,21 @@ public class SinglePlayEnvironment extends Environment implements InputProcessor
         }
         
         if( PUPPET ) {
-        	this.puppet = new PuppetAgent(this.TiledMap, this.TraverseNodes, new TileAStarPathFinder(), startX, startY, this.BulletTracker, this.shooters);
+        	//this.puppet = new PuppetAgent(this.TiledMap, this.TraverseNodes, new TileAStarPathFinder(), startX, startY, this.BulletTracker, this.shooters);
 
+            Vector2 startVector   = new Vector2(startX, startY);
+            int startAngle        = 90;
+            int degreeVision      = 120;
+            int depthVision       = 4 * Params.MapTileSize;
+            int health            = 20;
 
+            HashSet<TileNode> tracker = new HashSet<TileNode>();
+            GraphPath<TileNode> prefPath = new DefaultGraphPath<TileNode>(); //GraphicsHelpers.getPrefPathTest(testLevelID, tracker, this.TraverseNodes);
+
+            this.puppet = new ConePuppetAgent(startVector, startAngle, degreeVision, depthVision, health, Params.TrainingAgentLivePNG, true, random,
+                    this.collisionLines, prefPath, tracker, this.TraverseNodes, this.TiledMap, this.trainees, this.shooters, this.BulletTracker);
+
+            this.trainees.add(this.puppet);
         }
     }
 
@@ -207,6 +215,76 @@ public class SinglePlayEnvironment extends Environment implements InputProcessor
     	}
 
 
+        // Test if Bullets Intersected with Anything
+        MapObjects wallMapObjects = this.TiledMap.getLayers().get(2).getObjects();
+        Iterator<GreenBullet> bullets = this.BulletTracker.iterator();
+        this.SpriteBatchRenderer.setProjectionMatrix(this.Camera.combined);
+        this.SpriteBatchRenderer.begin();
+
+        while(bullets.hasNext()) {
+            // Collect a Bullet to consider
+            GreenBullet currentBullet = bullets.next();
+
+            if( DRAW ) { currentBullet.drawSprite(this.SpriteBatchRenderer); }
+
+            currentBullet.updateBullet(deltaTime);
+
+            // If bullet is off-screen, remove it.
+            if( currentBullet.getBulletVector().x < 0 ||
+                    currentBullet.getBulletVector().x > this.width ||
+                    currentBullet.getBulletVector().y < 0 ||
+                    currentBullet.getBulletVector().y > this.height)
+            {
+                this.BulletTracker.remove(currentBullet);
+            } else {
+                // Compare with all Agents
+                Rectangle agentBound;
+
+                Iterator<AgentModel> shootItr = this.shooters.iterator();
+
+                while(shootItr.hasNext()) {
+                    AgentModel currShooter = shootItr.next();
+
+                    if( Intersector.overlapConvexPolygons(GraphicsHelpers.convertRectangleToPolygon(currShooter.getBoundingRectangle()), currentBullet.getBulletPath())) {
+                        currShooter.agentHit();
+                        this.BulletTracker.remove(currentBullet);
+                    }
+                }
+
+
+                Iterator<AgentModel> agentItr = this.trainees.iterator();
+
+                while(agentItr.hasNext()) {
+                    AgentModel currAgent = agentItr.next();
+
+                    if( Intersector.overlapConvexPolygons(GraphicsHelpers.convertRectangleToPolygon(currAgent.getBoundingRectangle()), currentBullet.getBulletPath())) {
+                        currAgent.agentHit();
+                        this.BulletTracker.remove(currentBullet);
+                    }
+                }
+
+
+                // Compare with all Wall Boundaries
+                for( int i = 0; i < wallMapObjects.getCount(); i++) {
+                    Object rectangleMapObject = wallMapObjects.get(i);
+
+                    // Make sure this is a Rectangle from Tiled describing a wall.
+                    if( rectangleMapObject.getClass() == RectangleMapObject.class ) {
+                        Rectangle wallRectangle = ((RectangleMapObject)rectangleMapObject).getRectangle();
+                        Polygon polyBound = GraphicsHelpers.convertRectangleToPolygon(wallRectangle);
+
+                        // Terminate when hitting a wall
+                        if( Intersector.overlapConvexPolygons(polyBound, currentBullet.getBulletPath())) {
+                            this.BulletTracker.remove(currentBullet);
+                        }
+                    }
+                }
+            }
+        }
+
+        this.SpriteBatchRenderer.end();
+
+
         // Draw DEBUG information
         if( DEBUG && DRAW) {
             // Draw Map Nodes
@@ -229,31 +307,29 @@ public class SinglePlayEnvironment extends Environment implements InputProcessor
             // For each Agent.  Different Colors?
             this.LineRenderer.setColor(Color.BLACK);
             
-            if( PUPPET ) {
+            /*if( PUPPET ) {
             	this.puppet.drawPath(this.LineRenderer);
-            }
-            
-            try{
-    		    Iterator<AgentModel> agentItr = this.trainees.iterator();
+            }*/
+
+            Iterator<AgentModel> agentItr = this.trainees.iterator();
     		    
-    		    while(agentItr.hasNext()) {
-                    AgentModel currAgent = agentItr.next();
-    		    	currAgent.drawPath(this.LineRenderer);
-    		    }
-            } catch( Exception ex) { /* Do nothing */ }
+            while(agentItr.hasNext()) {
+                AgentModel currAgent = agentItr.next();
+                currAgent.drawPath(this.LineRenderer);
+            }
 
             this.LineRenderer.end();
         }
         
 
         // Draw Agent Sprites
-        this.SpriteBatchRenderer.setProjectionMatrix(this.Camera.combined);
+
         this.SpriteBatchRenderer.begin();
         
-        if( PUPPET ) {
+        /*if( PUPPET ) {
         	this.puppet.updateAgent(deltaTime);
         	this.puppet.drawAgent(this.SpriteBatchRenderer);
-        }
+        }*/
 
         Iterator<AgentModel> shootItr = this.shooters.iterator();
         
@@ -264,98 +340,76 @@ public class SinglePlayEnvironment extends Environment implements InputProcessor
         	if( DRAW ) { currShooter.drawAgent(this.SpriteBatchRenderer); }
         }
         
-        try{
-		    Iterator<AgentModel> agentItr = this.trainees.iterator();
+
+		Iterator<AgentModel> agentItr = this.trainees.iterator();
 		    
-		    while(agentItr.hasNext()) {
-                AgentModel currAgent = agentItr.next();
-		    	
-		    	currAgent.updateAgent(deltaTime);
-		    	if( DRAW ) { currAgent.drawAgent(this.SpriteBatchRenderer); }
-		    }
-        } catch( Exception ex) { /* Do nothing */ }
-        
-        
-        // Test if Bullets Intersected with Anything
-        MapObjects wallMapObjects = this.TiledMap.getLayers().get(2).getObjects();
-        ShapeRenderer anotherShapeRenderer = new ShapeRenderer();
-        Iterator<GreenBullet> bullets = this.BulletTracker.iterator();
-        //this.SpriteBatchRenderer.begin();
-        
-        while(bullets.hasNext()) {
-        	// Collect a Bullet to consider
-        	GreenBullet currentBullet = bullets.next();
-        	
-        	if( DRAW ) { currentBullet.drawSprite(this.SpriteBatchRenderer); }
-        	
-        	currentBullet.updateBullet(deltaTime);
-        	
-        	// If bullet is off-screen, remove it.
-        	if( currentBullet.getBulletVector().x < 0 || 
-        		currentBullet.getBulletVector().x > this.width || 
-        		currentBullet.getBulletVector().y < 0 ||
-        		currentBullet.getBulletVector().y > this.height) 
-        	{
-        		this.BulletTracker.remove(currentBullet);
-        	} else {
-	        	// Compare with all Agents
-	        	
-        		
-	        	
-	        	// Compare with all Wall Boundaries
-	        	for( int i = 0; i < wallMapObjects.getCount(); i++) {
-	        		Object rectangleMapObject = wallMapObjects.get(i);
-		        	
-	        		// Make sure this is a Rectangle from Tiled describing a wall.
-		        	if( rectangleMapObject.getClass() == RectangleMapObject.class ) {
-		        		Rectangle wallRectangle = ((RectangleMapObject)rectangleMapObject).getRectangle();
-		        		Polygon polyBound = GraphicsHelpers.convertRectangleToPolygon(wallRectangle);
-		        		
-		        		// Terminate when hitting a wall
-		        		if( Intersector.overlapConvexPolygons(polyBound, currentBullet.getBulletPath())) {
-		        			this.BulletTracker.remove(currentBullet);
-		        		}
-		        	}
-	        	}
-        	}
+		while(agentItr.hasNext()) {
+            AgentModel currAgent = agentItr.next();
+
+            currAgent.updateAgent(deltaTime);
+
+            if (DRAW) {
+                currAgent.drawAgent(this.SpriteBatchRenderer);
+            }
         }
-        anotherShapeRenderer.end();
+
         this.SpriteBatchRenderer.end();
-        
-        // Test Draw the Collision Boxes
+
+
+        Iterator<AgentModel> agentItr2 = this.trainees.iterator();
+
+        ShapeRenderer visionCone = new ShapeRenderer();
+        visionCone.setProjectionMatrix(this.Camera.combined);
+        visionCone.begin(ShapeRenderer.ShapeType.Line);
+        visionCone.setColor(Color.YELLOW);
+
+        while(agentItr2.hasNext()) {
+            AgentModel currAgent = agentItr2.next();
+
+            if( DEBUG ) {
+                currAgent.drawVision(visionCone);
+            }
+        }
+
+        visionCone.end();
+
+
+        /*// Test Draw the Collision Boxes
         if( DEBUG && DRAW ) {
+            ShapeRenderer anotherShapeRenderer = new ShapeRenderer();
+
 	        anotherShapeRenderer.setProjectionMatrix(this.Camera.combined);
 	        anotherShapeRenderer.begin(ShapeRenderer.ShapeType.Line);
-	        
+
 	        bullets = this.BulletTracker.iterator();
-	        
+
 	        while(bullets.hasNext()) {
 	        	GreenBullet currentBullet = bullets.next();
 	        	anotherShapeRenderer.polygon(currentBullet.getBulletPath().getTransformedVertices());
 	        }
-	        
+
 	        for(int i = 0; i < wallMapObjects.getCount(); i++ ){
 	        	Object obj = wallMapObjects.get(i);
-	        	
+
 	        	if( obj.getClass() == RectangleMapObject.class ) {
 	        		Rectangle boundary = ((RectangleMapObject)obj).getRectangle();
 	        		anotherShapeRenderer.rect(boundary.x, boundary.y, boundary.width, boundary.height);
-	        		
-	        		float[] vertices = { 
-	        			boundary.x, boundary.y, 
+
+	        		float[] vertices = {
+	        			boundary.x, boundary.y,
 	        			boundary.x + boundary.width, boundary.y,
 	        			boundary.x + boundary.width, boundary.y + boundary.height,
 	        			boundary.x, boundary.y + boundary.height
 	        		};
-	        		
+
 	        		//Polygon polyBound = new Polygon(vertices);
 	        		anotherShapeRenderer.setColor(Color.BLUE);
 	        		anotherShapeRenderer.polygon(vertices);
 	        	}
 	        }
-	        
+
 	        anotherShapeRenderer.end();
-        }
+        }*/
         
         
     }

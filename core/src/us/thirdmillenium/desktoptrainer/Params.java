@@ -174,11 +174,11 @@ public interface Params {
 
     static final float ConeVisEmpty = 0;
 
-    static final float ConeVisTeam = 1 / ConeVisNorm;
+    static final float ConeVisWall = 1 / ConeVisNorm;
 
-    static final float ConeVisPath = 2 / ConeVisNorm;
+    static final float ConeVisTeam = 2 / ConeVisNorm;
 
-    static final float ConeVisWall = 3 / ConeVisNorm;
+    static final float ConeVisPath = 3 / ConeVisNorm;
 
     static final float ConeVisEnemy = 4 / ConeVisNorm;
 
