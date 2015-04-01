@@ -245,7 +245,7 @@ public class SinglePlayEnvironment extends Environment implements InputProcessor
                 while(shootItr.hasNext()) {
                     AgentModel currShooter = shootItr.next();
 
-                    if( Intersector.overlapConvexPolygons(GraphicsHelpers.convertRectangleToPolygon(currShooter.getBoundingRectangle()), currentBullet.getBulletPath())) {
+                    if( !currentBullet.thisAgentShotMe(currShooter) && Intersector.overlapConvexPolygons(GraphicsHelpers.convertRectangleToPolygon(currShooter.getBoundingRectangle()), currentBullet.getBulletPath())) {
                         currShooter.agentHit();
                         this.BulletTracker.remove(currentBullet);
                     }
@@ -257,7 +257,7 @@ public class SinglePlayEnvironment extends Environment implements InputProcessor
                 while(agentItr.hasNext()) {
                     AgentModel currAgent = agentItr.next();
 
-                    if( Intersector.overlapConvexPolygons(GraphicsHelpers.convertRectangleToPolygon(currAgent.getBoundingRectangle()), currentBullet.getBulletPath())) {
+                    if( !currentBullet.thisAgentShotMe(currAgent) && Intersector.overlapConvexPolygons(GraphicsHelpers.convertRectangleToPolygon(currAgent.getBoundingRectangle()), currentBullet.getBulletPath())) {
                         currAgent.agentHit();
                         this.BulletTracker.remove(currentBullet);
                     }
@@ -288,7 +288,7 @@ public class SinglePlayEnvironment extends Environment implements InputProcessor
         // Draw DEBUG information
         if( DEBUG && DRAW) {
             // Draw Map Nodes
-            this.MapNodeSR.setProjectionMatrix(this.Camera.combined);
+            /*this.MapNodeSR.setProjectionMatrix(this.Camera.combined);
             this.MapNodeSR.setColor(Color.OLIVE);
             this.MapNodeSR.begin(ShapeRenderer.ShapeType.Filled);
 
@@ -298,7 +298,7 @@ public class SinglePlayEnvironment extends Environment implements InputProcessor
                 }
             }
 
-            this.MapNodeSR.end();
+            this.MapNodeSR.end();*/
             
             // Draw Overlay Lines
             this.LineRenderer.setProjectionMatrix(this.Camera.combined);

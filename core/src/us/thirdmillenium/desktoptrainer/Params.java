@@ -129,7 +129,7 @@ public interface Params {
 
 
     /** Bullet Velocity (pixels/frame). */
-    static final float BulletVelocity = 20;
+    static final float BulletVelocity = 5;
 
     /** Bullet Path vertices at Origin (0,0) */
     static final float[] BulletPathOriginVertices = {
@@ -154,6 +154,8 @@ public interface Params {
 
     /** Agent Fire Rate (fire/sec) */
     static final float AgentFireRate = 0.5f;
+
+    static final int AgentFireRateCooldown = (int)FramesPerSecond / 2;
 
 
     /** Shooting Agent hit points */

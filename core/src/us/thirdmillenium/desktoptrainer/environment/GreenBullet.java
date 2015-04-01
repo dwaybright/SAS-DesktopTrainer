@@ -1,5 +1,6 @@
 package us.thirdmillenium.desktoptrainer.environment;
 
+
 import us.thirdmillenium.desktoptrainer.Params;
 
 import com.badlogic.gdx.graphics.Texture;
@@ -7,6 +8,7 @@ import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Polygon;
 import com.badlogic.gdx.math.Vector2;
+import us.thirdmillenium.desktoptrainer.agents.AgentModel;
 
 
 public class GreenBullet {
@@ -14,16 +16,18 @@ public class GreenBullet {
 	private Vector2 currentLocation;
 	private Polygon bulletPath;
 	private float degreeAngle;
+	private AgentModel shotMe;
 	
 	
-	public GreenBullet(Vector2 bulletLocation, float degreeAngle) {
+	public GreenBullet(Vector2 bulletLocation, float degreeAngle, AgentModel shotMe) {
+
 		// Setup current bullet information
 		this.currentLocation = bulletLocation;
 		this.degreeAngle = degreeAngle;
 		
 		// Create, Rotate, and Translate the Bullet Path Bounding Box
 		this.bulletPath = new Polygon(Params.BulletPathOriginVertices);
-		this.bulletPath.rotate(degreeAngle);
+		this.bulletPath.setRotation(degreeAngle);
 		this.bulletPath.translate(bulletLocation.x, bulletLocation.y);
 		
 		// Bullet Sprite
@@ -31,6 +35,8 @@ public class GreenBullet {
 		this.bulletSprite = new Sprite(bulletTexture);
 		this.bulletSprite.setCenter(bulletLocation.x, bulletLocation.y);
 		this.bulletSprite.setRotation(degreeAngle);
+
+		this.shotMe = shotMe;
 	}
 	
 	/**
@@ -40,8 +46,9 @@ public class GreenBullet {
 	 */
 	public void updateBullet(float timeDelta) {
 		// Update Location
-		Vector2 unitVec = new Vector2(0,1);
+		Vector2 unitVec = new Vector2(1,0);
 		unitVec.rotate(this.degreeAngle);
+
 		unitVec.scl(Params.BulletVelocity);
 		this.currentLocation.add(unitVec);
 		
@@ -67,4 +74,12 @@ public class GreenBullet {
 	 * @return The Vector2 describing Bullet location and rotation.
 	 */
 	public Vector2 getBulletVector() { return this.currentLocation; }
+
+	public boolean thisAgentShotMe(AgentModel someAgent) {
+		if( someAgent == this.shotMe ) {
+			return true;
+		}
+
+		return false;
+	}
 }

@@ -63,6 +63,9 @@ public class ConePuppetAgent extends AgentModel {
     private Vector2 position;
     private float rotation;
 
+    // Agent Bullet Info
+    private int fireCooldown = 0;
+
     // Agent Preferred Path
     private TileAStarPathFinder pathFinder;
     private ConcurrentHashMap<Integer, TileNode> mapNodes;
@@ -146,6 +149,7 @@ public class ConePuppetAgent extends AgentModel {
         if( (--this.health) < 1 ) {
             this.ALIVE = false;
             this.sprite = new Sprite(new Texture(Params.DeadAgentPNG));
+            this.sprite.setCenter(this.position.x, this.position.y);
         } else {
             // Run!!!
             this.dangerOverride = true;
@@ -420,24 +424,41 @@ public class ConePuppetAgent extends AgentModel {
             }
         }
 
+        if( seenEnemyAgent ) {
+            this.output[2] = 0;
+        }
+
         // highItem = Math.max(leftHighItem, rightHighItem);
         // highItemIndex = (leftHighItem >= rightHighItem) ? leftHighItemIndex : rightHighItemIndex;
 
         // Choose highest item in core direction
-        if ((item.length - rightHighItemIndex) < ((item.length / 2) - leftHighItemIndex)) {
+        if( rightHighItem == 1 && leftHighItem == 1 ) {
+            if ((item.length - rightHighItemIndex) < ((item.length / 2) - leftHighItemIndex)) {
+                highItem = rightHighItem;
+                highItemIndex = rightHighItemIndex;
+            } else {
+                highItem = leftHighItem;
+                highItemIndex = leftHighItemIndex;
+            }
+        } else if(rightHighItem == 1) {
             highItem = rightHighItem;
             highItemIndex = rightHighItemIndex;
-        } else {
+        } else if(leftHighItem == 1) {
             highItem = leftHighItem;
             highItemIndex = leftHighItemIndex;
+        } else {
+            if ((item.length - rightHighItemIndex) < ((item.length / 2) - leftHighItemIndex)) {
+                highItem = rightHighItem;
+                highItemIndex = rightHighItemIndex;
+            } else {
+                highItem = leftHighItem;
+                highItemIndex = leftHighItemIndex;
+            }
         }
 
         // Set shooting to 0 (only one place it should be 1)
         this.output[2] = 0;
 
-        if( seenEnemyAgent ) {
-            this.output[2] = 0;
-        }
 
 
         if (highItem > 0.9) {                          // Enemy
@@ -445,15 +466,17 @@ public class ConePuppetAgent extends AgentModel {
             float angleChange = (this.degreesOfView / 2) - highItemIndex;
 
             if (Math.abs(angleChange) > Params.AgentMaxTurnAngle) {
-                this.output[0] = angleChange < 0 ? 0 : 1;
+                this.output[0] = angleChange < 0 ? 1 : 0;
 
                 // Change speed?  But stay slow.  (Scaredy-cat mode would be run?)
                 this.output[1] = 0.25;  // Remember, 0.2 means 0 velocity
             } else {
-                this.output[0] = ((this.rotation + angleChange) / Params.AgentMaxTurnAngle) + 0.5f;
+                this.output[0] = (angleChange / Params.AgentMaxTurnAngle) / 2;
+
+                if( this.output[0] < 0 ) { this.output[0] = 0.5 + this.output[0]; }
 
                 // Don't move!
-                this.output[1] = 0.2;
+                this.output[1] = 0.25;
 
                 // Shoot!!!
                 this.output[2] = 1;
@@ -535,7 +558,21 @@ public class ConePuppetAgent extends AgentModel {
         this.position = boundaryCheckNewPosition(newPosition);
 
         // Finally, update Sprite position
+        this.sprite.setRotation(this.rotation);
         this.sprite.setCenter(this.position.x, this.position.y);
+
+        // Shoot bullet?
+        if( this.output[2] == 1 ) {
+           if( this.fireCooldown-- < 1 ) {
+                //Vector2 bulletDirection = (new Vector2(0, 1)).rotate(this.rotation);
+                //Vector2 bulletStart = new Vector2(bulletDirection.x * 30, bulletDirection.y * 30);
+
+                this.bulletTracker.add(new GreenBullet(this.position.cpy(), this.rotation + 90, this));
+
+                this.fireCooldown = Params.AgentFireRateCooldown;
+           }
+        }
+
     }
 
 
@@ -546,18 +583,22 @@ public class ConePuppetAgent extends AgentModel {
 
     @Override
     public void drawPath(ShapeRenderer sr) {
-        // Draws the CurrentPath.
-        if( this.preferredPath != null) {
-            for (int i = 1; i < this.preferredPath.getCount(); i++) {
-                sr.rectLine(this.preferredPath.get(i - 1).getPixelX(), this.preferredPath.get(i - 1).getPixelY(),
-                        this.preferredPath.get(i).getPixelX(), this.preferredPath.get(i).getPixelY(), 5);
+        if( this.ALIVE ) {
+            // Draws the CurrentPath.
+            if (this.preferredPath != null) {
+                for (int i = 1; i < this.preferredPath.getCount(); i++) {
+                    sr.rectLine(this.preferredPath.get(i - 1).getPixelX(), this.preferredPath.get(i - 1).getPixelY(),
+                            this.preferredPath.get(i).getPixelX(), this.preferredPath.get(i).getPixelY(), 5);
+                }
             }
         }
     }
 
     @Override
     public void drawVision(ShapeRenderer sr) {
-        sr.polygon(this.visionPolygonVertices);
+        if( this.ALIVE ) {
+            sr.polygon(this.visionPolygonVertices);
+        }
     }
 
     @Override

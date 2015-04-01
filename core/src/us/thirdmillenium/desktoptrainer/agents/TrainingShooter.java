@@ -77,7 +77,14 @@ public class TrainingShooter extends AgentModel {
 
     @Override
     public void agentHit() {
+		if( (--this.health) < 1 ) {
+			this.alive = false;
 
+			this.sprite = new Sprite(new Texture(Params.DeadAgentPNG));
+			this.sprite.setCenter(this.position.x, this.position.y);
+
+			this.shooters.remove(this);
+		}
     }
 
     @Override
@@ -117,7 +124,7 @@ public class TrainingShooter extends AgentModel {
 					
 					this.sprite.setRotation(angle);
 					
-		        	this.bulletTracker.add(new GreenBullet(new Vector2(this.position.x, this.position.y), calcFireAngle(angle)));
+		        	this.bulletTracker.add(new GreenBullet(new Vector2(this.position.x, this.position.y), calcFireAngle(angle), this));
 		        	this.canShoot = false;
 		        	this.timeSinceLastShot = 0;
 		        	
@@ -176,6 +183,7 @@ public class TrainingShooter extends AgentModel {
 		if((--this.health) < 1 ) {
 			this.alive = false;
 			this.sprite = new Sprite(this.deadPic);
+			this.sprite.setCenter(this.position.x, this.position.y);
 			this.shooters.remove(this);
 		}
 	}
