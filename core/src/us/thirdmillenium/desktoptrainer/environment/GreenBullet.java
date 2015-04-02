@@ -27,8 +27,9 @@ public class GreenBullet {
 		
 		// Create, Rotate, and Translate the Bullet Path Bounding Box
 		this.bulletPath = new Polygon(Params.BulletPathOriginVertices);
-		this.bulletPath.setRotation(degreeAngle);
+        this.bulletPath.setRotation(degreeAngle);
 		this.bulletPath.translate(bulletLocation.x, bulletLocation.y);
+
 		
 		// Bullet Sprite
 		Texture bulletTexture = new Texture("core/assets/bullet1.png");
@@ -46,7 +47,7 @@ public class GreenBullet {
 	 */
 	public void updateBullet(float timeDelta) {
 		// Update Location
-		Vector2 unitVec = new Vector2(1,0);
+		Vector2 unitVec = new Vector2(0,1);
 		unitVec.rotate(this.degreeAngle);
 
 		unitVec.scl(Params.BulletVelocity);
@@ -76,10 +77,6 @@ public class GreenBullet {
 	public Vector2 getBulletVector() { return this.currentLocation; }
 
 	public boolean thisAgentShotMe(AgentModel someAgent) {
-		if( someAgent == this.shotMe ) {
-			return true;
-		}
-
-		return false;
+		return someAgent == this.shotMe;
 	}
 }

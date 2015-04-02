@@ -417,7 +417,7 @@ public class ConePuppetAgent extends AgentModel {
             }
         }
 
-        for (int i = (item.length / 2) + 1; i < item.length; i++) {
+        for (int i = (item.length / 2); i < item.length; i++) {
             if (rightHighItem < item[i]) {
                 rightHighItem = item[i];
                 rightHighItemIndex = i;
@@ -434,25 +434,25 @@ public class ConePuppetAgent extends AgentModel {
         // Choose highest item in core direction
         if( rightHighItem == 1 && leftHighItem == 1 ) {
             if ((item.length - rightHighItemIndex) < ((item.length / 2) - leftHighItemIndex)) {
-                highItem = rightHighItem;
-                highItemIndex = rightHighItemIndex;
+                highItem        = rightHighItem;
+                highItemIndex   = rightHighItemIndex;
             } else {
-                highItem = leftHighItem;
-                highItemIndex = leftHighItemIndex;
+                highItem        = leftHighItem;
+                highItemIndex   = leftHighItemIndex;
             }
         } else if(rightHighItem == 1) {
-            highItem = rightHighItem;
-            highItemIndex = rightHighItemIndex;
+            highItem        = rightHighItem;
+            highItemIndex   = rightHighItemIndex;
         } else if(leftHighItem == 1) {
-            highItem = leftHighItem;
-            highItemIndex = leftHighItemIndex;
+            highItem        = leftHighItem;
+            highItemIndex   = leftHighItemIndex;
         } else {
             if ((item.length - rightHighItemIndex) < ((item.length / 2) - leftHighItemIndex)) {
-                highItem = rightHighItem;
-                highItemIndex = rightHighItemIndex;
+                highItem        = rightHighItem;
+                highItemIndex   = rightHighItemIndex;
             } else {
-                highItem = leftHighItem;
-                highItemIndex = leftHighItemIndex;
+                highItem        = leftHighItem;
+                highItemIndex   = leftHighItemIndex;
             }
         }
 
@@ -470,13 +470,22 @@ public class ConePuppetAgent extends AgentModel {
 
                 // Change speed?  But stay slow.  (Scaredy-cat mode would be run?)
                 this.output[1] = 0.25;  // Remember, 0.2 means 0 velocity
+            } else if( angleChange == 0 ) {
+                this.output[0] = 0.5;
+
+                // Don't move!
+                this.output[1] = 0.22;
+
+                // Shoot!!!
+                this.output[2] = 1;
+
             } else {
                 this.output[0] = (angleChange / Params.AgentMaxTurnAngle) / 2;
 
                 if( this.output[0] < 0 ) { this.output[0] = 0.5 + this.output[0]; }
 
                 // Don't move!
-                this.output[1] = 0.25;
+                this.output[1] = 0.22;
 
                 // Shoot!!!
                 this.output[2] = 1;
@@ -509,8 +518,8 @@ public class ConePuppetAgent extends AgentModel {
             }
 
             for (int i = (distance.length / 2) + 1; i < distance.length; i++) {
-                if (rightMostDistant > distance[i]) {
-                    rightMostDistant = item[i];
+                if ( distance[i] > rightMostDistant ) {
+                    rightMostDistant = distance[i];
                     rightMostDistantIndex = i;
                 }
             }
@@ -545,7 +554,14 @@ public class ConePuppetAgent extends AgentModel {
     public void updatePosition() {
 
         // Compute Angle Change  ( -1 Hard Counter Clockwise, +1 Hard Clockwise, 0 is no rotation )
-        float angleChange = (float)(2 * (0.5 - output[0]) * Params.AgentMaxTurnAngle);
+        float angleChange;// = (float)(2 * (0.5 - output[0]) * Params.AgentMaxTurnAngle);
+
+        if( this.output[0] <= 0.5 ) {
+            angleChange = (float)(Math.abs(this.output[0] - 0.5)) * -2 * Params.AgentMaxTurnAngle;
+        } else {
+            angleChange = (float)(this.output[0] - 0.5) * -2 * Params.AgentMaxTurnAngle;
+        }
+
         this.rotation += angleChange;
 
         // Compute Movement Length in Pixels  ( -0.25 Backward, +1 Forward )
@@ -561,13 +577,15 @@ public class ConePuppetAgent extends AgentModel {
         this.sprite.setRotation(this.rotation);
         this.sprite.setCenter(this.position.x, this.position.y);
 
+        System.out.println("Rotation: " + this.rotation + "  X: " + this.position.x + "  Y:" + this.position.y);
+
         // Shoot bullet?
         if( this.output[2] == 1 ) {
            if( this.fireCooldown-- < 1 ) {
                 //Vector2 bulletDirection = (new Vector2(0, 1)).rotate(this.rotation);
                 //Vector2 bulletStart = new Vector2(bulletDirection.x * 30, bulletDirection.y * 30);
 
-                this.bulletTracker.add(new GreenBullet(this.position.cpy(), this.rotation + 90, this));
+                this.bulletTracker.add(new GreenBullet(this.position.cpy(), this.rotation, this));
 
                 this.fireCooldown = Params.AgentFireRateCooldown;
            }
