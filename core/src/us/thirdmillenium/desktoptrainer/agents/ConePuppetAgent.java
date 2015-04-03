@@ -42,6 +42,7 @@ import us.thirdmillenium.desktoptrainer.graphics.Line;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.PrintWriter;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -165,6 +166,18 @@ public class ConePuppetAgent extends AgentModel {
 
             updatePosition();
 
+            // Check path node
+            TileNode node = GraphicsHelpers.findTileNodeByPixelLocation((int)this.position.x, (int)this.position.y, this.mapNodes);
+
+            if( this.preferredPathNodeTracker.contains(node) ) {
+                for (int i = this.preferredPathIndex; i < this.preferredPath.getCount(); i++) {
+                    if( this.preferredPath.get(i) == node ) {
+                        this.preferredPathIndex = i+1;
+                        break;
+                    }
+                }
+            }
+
             // Write out training data
             if(this.writeDataToFile) { writeTrainingData(); }
         }
@@ -183,7 +196,7 @@ public class ConePuppetAgent extends AgentModel {
             }
 
             // Write out to file
-            csvWriter = new PrintWriter(new FileOutputStream(this.csvFile), true);
+            csvWriter = new PrintWriter(new FileWriter(this.csvFile, true), true);
 
             for(int i = 0; i < this.input.length; i++ ) {
                 csvWriter.print( this.input[i] );
@@ -207,7 +220,7 @@ public class ConePuppetAgent extends AgentModel {
     @Override
     public void setPathToGoal(float goalX, float goalY) {
         // Reset Index Tracker
-        this.preferredPathIndex = 1;
+        this.preferredPathIndex = 0;
 
         // Start and Goal node
         TileNode startNode = GraphicsHelpers.findTileNodeByPixelLocation((int)this.position.x, (int)this.position.y, this.mapNodes);
@@ -356,7 +369,7 @@ public class ConePuppetAgent extends AgentModel {
             if( !seenAgent ) {
                 TileNode node;
 
-                for(int index = 0; index < this.preferredPath.getCount(); index++) {
+                for(int index = this.preferredPathIndex; index < this.preferredPath.getCount(); index++) {
                     node = this.preferredPath.get(index);
 
                     // Place radius 5 circle over preferred path node
@@ -424,35 +437,35 @@ public class ConePuppetAgent extends AgentModel {
             }
         }
 
+        // Debug
         if( seenEnemyAgent ) {
             this.output[2] = 0;
         }
 
-        // highItem = Math.max(leftHighItem, rightHighItem);
-        // highItemIndex = (leftHighItem >= rightHighItem) ? leftHighItemIndex : rightHighItemIndex;
+        // Choose high item
+        float angleChange;
 
-        // Choose highest item in core direction
-        if( rightHighItem == 1 && leftHighItem == 1 ) {
-            if ((item.length - rightHighItemIndex) < ((item.length / 2) - leftHighItemIndex)) {
-                highItem        = rightHighItem;
-                highItemIndex   = rightHighItemIndex;
-            } else {
-                highItem        = leftHighItem;
-                highItemIndex   = leftHighItemIndex;
-            }
-        } else if(rightHighItem == 1) {
+        if( rightHighItem > leftHighItem ) {
             highItem        = rightHighItem;
             highItemIndex   = rightHighItemIndex;
-        } else if(leftHighItem == 1) {
+
+            angleChange = rightHighItemIndex - (this.degreesOfView / 2);
+        } else if( leftHighItem > rightHighItem ) {
             highItem        = leftHighItem;
             highItemIndex   = leftHighItemIndex;
+
+            angleChange = (this.degreesOfView / 2) - leftHighItemIndex;
         } else {
             if ((item.length - rightHighItemIndex) < ((item.length / 2) - leftHighItemIndex)) {
                 highItem        = rightHighItem;
                 highItemIndex   = rightHighItemIndex;
+
+                angleChange = rightHighItemIndex - (this.degreesOfView / 2);
             } else {
                 highItem        = leftHighItem;
                 highItemIndex   = leftHighItemIndex;
+
+                angleChange = (this.degreesOfView / 2) - leftHighItemIndex;
             }
         }
 
@@ -463,10 +476,10 @@ public class ConePuppetAgent extends AgentModel {
 
         if (highItem > 0.9) {                          // Enemy
             // Rotate toward the enemy
-            float angleChange = (this.degreesOfView / 2) - highItemIndex;
+            //angleChange = highItemIndex - (this.degreesOfView / 2);
 
-            if (Math.abs(angleChange) > Params.AgentMaxTurnAngle) {
-                this.output[0] = angleChange < 0 ? 1 : 0;
+            if (Math.abs(angleChange) >= Params.AgentMaxTurnAngle) {
+                this.output[0] = angleChange < 0 ? 0 : 1;
 
                 // Change speed?  But stay slow.  (Scaredy-cat mode would be run?)
                 this.output[1] = 0.25;  // Remember, 0.2 means 0 velocity
@@ -480,9 +493,10 @@ public class ConePuppetAgent extends AgentModel {
                 this.output[2] = 1;
 
             } else {
-                this.output[0] = (angleChange / Params.AgentMaxTurnAngle) / 2;
+                this.output[0] = ((angleChange / Params.AgentMaxTurnAngle) / 2) + 0.5f;
 
-                if( this.output[0] < 0 ) { this.output[0] = 0.5 + this.output[0]; }
+                //if( this.output[0] < 0 ) { this.output[0] += 0.5; }
+                //this.output[0] += 0.5;
 
                 // Don't move!
                 this.output[1] = 0.22;
@@ -490,19 +504,30 @@ public class ConePuppetAgent extends AgentModel {
                 // Shoot!!!
                 this.output[2] = 1;
             }
-        } else if (highItem > 0.7) {                       // Path Node  OR Follow Team Member
+        } else if (highItem > 0.4) {                       // Path Node  OR Follow Team Member
             // Rotate toward the path nod
-            float angleChange = (this.degreesOfView / 2) - highItemIndex;
+            //angleChange = highItemIndex - (this.degreesOfView / 2); // - highItemIndex;
 
-            if (Math.abs(angleChange) > Params.AgentMaxTurnAngle) {
+            if (Math.abs(angleChange) >= Params.AgentMaxTurnAngle) {
                 this.output[0] = angleChange < 0 ? 0 : 1;
 
-                // Big turn!  Small Backward step
-                this.output[1] = 0.18;  // Remember, 0.2 means 0 velocity
-            } else {
-                this.output[0] = ((this.rotation + angleChange) / Params.AgentMaxTurnAngle) + 0.5f;
+                // Big turn!  Small forward
+                this.output[1] = 0.3;  // Remember, 0.2 means 0 velocity
+            } else if( angleChange == 0 ) {
+                this.output[0] = 0.5;
 
-                this.output[1] = (-3.5 * Math.pow(this.output[0] - 0.5, 2)) + 0.8;
+                // Move!
+                this.output[1] = 1;
+
+                // No Shoot!!!
+                this.output[2] = 0;
+            } else {
+                this.output[0] = ((angleChange / Params.AgentMaxTurnAngle) / 2) + 0.5f;
+
+                //if( this.output[0] < 0 ) { this.output[0] += 0.5; }
+                //this.output[0] += 0.5;
+
+                this.output[1] = (-1.7 * Math.pow(this.output[0] - 0.5, 2)) + 0.8;
             }
 
         } else if (highItem > 0.2 && highItem < 0.3) {       // Wall
@@ -517,7 +542,7 @@ public class ConePuppetAgent extends AgentModel {
                 }
             }
 
-            for (int i = (distance.length / 2) + 1; i < distance.length; i++) {
+            for (int i = distance.length / 2; i < distance.length; i++) {
                 if ( distance[i] > rightMostDistant ) {
                     rightMostDistant = distance[i];
                     rightMostDistantIndex = i;
@@ -527,21 +552,25 @@ public class ConePuppetAgent extends AgentModel {
             mostDistant = (leftMostDistant < rightMostDistant) ? rightMostDistant : leftMostDistant;
             mostDistantIndex = (leftMostDistant < rightMostDistant) ? rightMostDistantIndex : leftMostDistantIndex;
 
+            angleChange = (leftMostDistant < rightMostDistant) ? this.degreesOfView - rightMostDistantIndex : leftMostDistantIndex - (this.degreesOfView/2);
+
             // Rotate toward the most open degree line
-            float angleChange = (this.degreesOfView / 2) - mostDistantIndex;
+            //angleChange = mostDistantIndex - (this.degreesOfView / 2);
 
             // Corner check
-            if (leftMostDistant < (Params.AgentTileSize + 5) / this.visionDepth && rightMostDistant < (Params.AgentTileSize + 5) / this.visionDepth) {
-                this.output[0] = 0;  // Hard counter-clockwise
-                this.output[1] = 0;  // Hard backwards
+            if (leftMostDistant < (Params.AgentTileSize + 20) / (float)this.visionDepth && rightMostDistant < (Params.AgentTileSize + 20) / (float)this.visionDepth) {
+                this.output[0] = 0.5;  // Hard counter-clockwise
+                this.output[1] = 1;  // Hard backwards
+
+                this.rotation += 180;
             } else if (Math.abs(angleChange) > Params.AgentMaxTurnAngle) {
                 // Big turn!  Keep forward though
-                this.output[0] = angleChange < 0 ? 0 : 1;
-                this.output[1] = 0.25;  // Remember, 0.2 means 0 velocity
+                this.output[0] = angleChange < 0 ? 1 : 0;
+                this.output[1] = 0.4;  // Remember, 0.2 means 0 velocity
             } else {
                 // Small Turn
-                this.output[0] = ((angleChange / (this.degreesOfView / 2)) / 2) + 0.5f; // ((this.rotation + angleChange) / Params.AgentMaxTurnAngle) + 0.5f;
-                this.output[1] = (-2.2 * Math.pow(this.output[0] - 0.5, 2)) + 0.8;
+                this.output[0] = ((angleChange / Params.AgentMaxTurnAngle) / 2) + 0.5f; // ((this.rotation + angleChange) / Params.AgentMaxTurnAngle) + 0.5f;
+                this.output[1] = (-1.1 * Math.pow(this.output[0] - 0.5, 2)) + 0.8;
             }
 
         } else {                            // Only see wide open space
@@ -556,10 +585,15 @@ public class ConePuppetAgent extends AgentModel {
         // Compute Angle Change  ( -1 Hard Counter Clockwise, +1 Hard Clockwise, 0 is no rotation )
         float angleChange;// = (float)(2 * (0.5 - output[0]) * Params.AgentMaxTurnAngle);
 
-        if( this.output[0] <= 0.5 ) {
-            angleChange = (float)(Math.abs(this.output[0] - 0.5)) * -2 * Params.AgentMaxTurnAngle;
+        if( this.output[0] == 0 ) {
+            angleChange = Params.AgentMaxTurnAngle;
+        } else if( this.output[0] <= 0.5 ) {
+            angleChange = (float)(this.output[0] - 0.5) * 2 * Params.AgentMaxTurnAngle;
+        } else if( this.output[0] == 1 ) {
+            angleChange = -Params.AgentMaxTurnAngle;
         } else {
-            angleChange = (float)(this.output[0] - 0.5) * -2 * Params.AgentMaxTurnAngle;
+            //angleChange = (float)(this.output[0] - 0.5) * -2 * Params.AgentMaxTurnAngle;
+            angleChange = (float)(this.output[0] - 1) * -2 * Params.AgentMaxTurnAngle;
         }
 
         this.rotation += angleChange;
@@ -604,8 +638,8 @@ public class ConePuppetAgent extends AgentModel {
         if( this.ALIVE ) {
             // Draws the CurrentPath.
             if (this.preferredPath != null) {
-                for (int i = 1; i < this.preferredPath.getCount(); i++) {
-                    sr.rectLine(this.preferredPath.get(i - 1).getPixelX(), this.preferredPath.get(i - 1).getPixelY(),
+                for (int i = this.preferredPathIndex; i < this.preferredPath.getCount() - 1; i++) {
+                    sr.rectLine(this.preferredPath.get(i + 1).getPixelX(), this.preferredPath.get(i + 1).getPixelY(),
                             this.preferredPath.get(i).getPixelX(), this.preferredPath.get(i).getPixelY(), 5);
                 }
             }

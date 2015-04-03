@@ -177,7 +177,7 @@ public class SinglePlayEnvironment extends Environment implements InputProcessor
         	//this.puppet = new PuppetAgent(this.TiledMap, this.TraverseNodes, new TileAStarPathFinder(), startX, startY, this.BulletTracker, this.shooters);
 
             Vector2 startVector   = new Vector2(startX, startY);
-            int startAngle        = 90;
+            int startAngle        = 60;
             int degreeVision      = 120;
             int depthVision       = 4 * Params.MapTileSize;
             int health            = 20;

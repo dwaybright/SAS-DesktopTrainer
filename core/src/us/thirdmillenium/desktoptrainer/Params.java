@@ -147,19 +147,19 @@ public interface Params {
 
 
     /** Agent Velocity (pixels/frame). */
-    static final float AgentMaxMovement = 2f;
+    static final float AgentMaxMovement = 3f;
 
     /** How Far an Agent can Rotate in a frame. */
     static final float AgentMaxTurnAngle = 15f;
 
     /** Agent Fire Rate (fire/sec) */
-    static final float AgentFireRate = 0.5f;
+    static final float AgentFireRate = 1f;
 
     static final int AgentFireRateCooldown = (int)FramesPerSecond / 2;
 
 
     /** Shooting Agent hit points */
-    static final short EnemyAgentHitPoints = 2;
+    static final short EnemyAgentHitPoints = 5;
 
     /** Shooting Agent hit points */
     static final short TeamAgentHitPoints = 200;
