@@ -16,6 +16,7 @@ limitations under the License.
 
 package us.thirdmillenium.desktoptrainer.agents;
 
+import com.badlogic.gdx.ai.pfa.DefaultGraphPath;
 import com.badlogic.gdx.ai.pfa.GraphPath;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.*;
@@ -29,6 +30,8 @@ import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 
 import us.thirdmillenium.desktoptrainer.Params;
+import us.thirdmillenium.desktoptrainer.ai.tile.TileAStarPathFinder;
+import us.thirdmillenium.desktoptrainer.ai.tile.TileHeuristic;
 import us.thirdmillenium.desktoptrainer.ai.tile.TileNode;
 import us.thirdmillenium.desktoptrainer.brains.Brain;
 import us.thirdmillenium.desktoptrainer.brains.NeuralNetworkBrain;
@@ -36,9 +39,11 @@ import us.thirdmillenium.desktoptrainer.graphics.GraphicsHelpers;
 import us.thirdmillenium.desktoptrainer.environment.GreenBullet;
 import us.thirdmillenium.desktoptrainer.graphics.Line;
 
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 
 public class ConeAgent extends AgentModel {
@@ -48,12 +53,24 @@ public class ConeAgent extends AgentModel {
     private Set<AgentModel> enemyTracker;
     private Set<AgentModel> teamTracker;
     private Set<Line> collisionLines;
+    private HashSet<TileNode> preferredPathNodeTracker;
+    private ConcurrentHashMap<Integer, TileNode> mapNodes;
+
+    // Danger overrides
+    private boolean dangerOverride;
+    private int dangerCoolDown;
 
     // Agent Position Information
+    private double momentum;
     private Sprite sprite;
+    private TileAStarPathFinder pathFinder;
     private GraphPath<TileNode> preferredPath;
+    private int preferredPathIndex;
     private Vector2 position;
     private float rotation;
+
+    // Agent Bullet Info
+    private int fireCooldown = 0;
 
     // Agent Vision
     private int degreesOfView;      // How many degrees I can see ahead of me
@@ -74,28 +91,35 @@ public class ConeAgent extends AgentModel {
 
 
     public ConeAgent(Vector2 startPosition, float startAngle, int degreesOfView, int visionDepth, int health, String spritePNG,
-                     Random random, Set<Line> collisionLines, String nnetPath, GraphPath<TileNode> prefPath,
-                     TiledMap gameMap, Set<AgentModel> team, Set<AgentModel> enemies, Set<GreenBullet> bullets) {
+                     Random random, Set<Line> collisionLines, String nnetPath, GraphPath<TileNode> prefPath, HashSet<TileNode> preferredPathNodeTracker,
+                     TiledMap gameMap, Set<AgentModel> team, Set<AgentModel> enemies, Set<GreenBullet> bullets, ConcurrentHashMap<Integer, TileNode> mapNodes) {
 
         // Agent Position and Movement Config
         this.brain = new NeuralNetworkBrain(nnetPath);
+        this.preferredPathNodeTracker = preferredPathNodeTracker;
         this.preferredPath = prefPath;
+        this.preferredPathIndex = 0;
+        this.mapNodes = mapNodes;
+        this.pathFinder = new TileAStarPathFinder();
         this.position = startPosition;
         this.rotation = startAngle;
+        this.momentum = 1;
 
         // Agent Vision Config
-        this.visionPolygonVertices = new float[(1 + this.degreesOfView) * 2];
         this.degreesOfView = degreesOfView;
         this.visionDepth = visionDepth;
+        this.visionPolygonVertices = new float[(1 + this.degreesOfView) * 2];
 
         // Agent Health
         this.ALIVE = true;
         this.health = health;
+        this.dangerOverride = false;
+        this.dangerCoolDown = 0;
 
         // Agent Sprite Config
         this.sprite = new Sprite(new Texture(spritePNG));
         this.sprite.setCenter(startPosition.x, startPosition.y);
-        this.sprite.rotate(startAngle);
+        this.sprite.setRotation(startAngle);
 
         // Environment Trackers
         this.gameMap = gameMap;
@@ -115,6 +139,11 @@ public class ConeAgent extends AgentModel {
         if( (--this.health) < 1 ) {
             this.ALIVE = false;
             this.sprite = new Sprite(new Texture(Params.DeadAgentPNG));
+            this.sprite.setCenter(this.position.x, this.position.y);
+        } else {
+            // Run!!!
+            this.dangerOverride = true;
+            this.dangerCoolDown = 5;
         }
     }
 
@@ -129,13 +158,59 @@ public class ConeAgent extends AgentModel {
             this.output = this.brain.brainCrunch(this.input);
 
             // Update Agent Position and Rotation
-            updatePosition(output);
+            updatePosition();
+
+            // Clean up preferred path
+            updatePrefPath();
         }
     }
 
+
+    private void updatePrefPath() {
+        // Check path node
+        TileNode node = GraphicsHelpers.findTileNodeByPixelLocation((int)this.position.x, (int)this.position.y, this.mapNodes);
+
+        if( this.preferredPathNodeTracker.contains(node) ) {
+            for (int i = this.preferredPathIndex; i < this.preferredPath.getCount(); i++) {
+                if( this.preferredPath.get(i) == node ) {
+                    this.preferredPathIndex = i+1;
+                    break;
+                }
+            }
+        }
+    }
+
+
     @Override
     public void setPathToGoal(float goalX, float goalY) {
+        // Reset Index Tracker
+        this.preferredPathIndex = 0;
 
+        // Start and Goal node
+        TileNode startNode = GraphicsHelpers.findTileNodeByPixelLocation((int)this.position.x, (int)this.position.y, this.mapNodes);
+        TileNode endNode   = GraphicsHelpers.findTileNodeByPixelLocation((int)goalX, (int)goalY, this.mapNodes);
+
+        // The returned path once computed
+        this.preferredPath = new DefaultGraphPath<TileNode>();
+
+        // Compute Path!
+        this.pathFinder.searchNodePath(startNode, endNode, new TileHeuristic(), this.preferredPath);
+
+        this.preferredPath.reverse();
+
+        // Node Tracker
+        Iterator<TileNode> itr = this.preferredPath.iterator();
+        this.preferredPathNodeTracker = new HashSet<TileNode>(300);
+
+        while(itr.hasNext()) {
+            TileNode tile = itr.next();
+
+            if( this.preferredPathNodeTracker.contains(tile) ) {
+                itr.remove();
+            } else {
+                this.preferredPathNodeTracker.add(tile);
+            }
+        }
     }
 
     @Override
@@ -180,8 +255,8 @@ public class ConeAgent extends AgentModel {
 
 
             // The boundRect is used for Sprite collision calcs
-            Rectangle agentBoundRect = new Rectangle(0, 0, Params.AgentTileSize, Params.AgentTileSize);
-            Rectangle bulletBoundRect = new Rectangle(0, 0, 5, 8);   // Hard coded!!! Gah!!
+            //Rectangle agentBoundRect = new Rectangle(0, 0, Params.AgentTileSize, Params.AgentTileSize);
+            //Rectangle bulletBoundRect = new Rectangle(0, 0, 5, 8);   // Hard coded!!! Gah!!
 
 
             // Detect Bullets?
@@ -202,6 +277,7 @@ public class ConeAgent extends AgentModel {
                     if (distToObject < distance[i]) {
                         item[i] = Params.ConeVisEnemy;
                         distance[i] = distToObject;
+
                         seenAgent = true;
                     }
                 }
@@ -215,7 +291,7 @@ public class ConeAgent extends AgentModel {
                 team = teamItr.next();
 
                 // If segment intersects circle
-                if( Intersector.intersectSegmentCircle(this.position, endPoint, team.getPosition(), Params.AgentRadiusSquared) ) {
+                if( team != this && Intersector.intersectSegmentCircle(this.position, endPoint, team.getPosition(), Params.AgentRadiusSquared) ) {
                     distToObject = this.position.dst(team.getPosition()) - (Params.AgentTileSize / 2);
 
                     // Check if Agents are within Vision Depth
@@ -234,7 +310,7 @@ public class ConeAgent extends AgentModel {
             while(lineItr.hasNext()) {
                 line = lineItr.next();
 
-                if( Intersector.intersectLines(this.position, endPoint, line.start, line.end, intersection) ) {
+                if( Intersector.intersectSegments(this.position, endPoint, line.start, line.end, intersection) ) {
                     distToObject = intersection.dst(this.position);
 
                     if( distToObject < distance[i] ) {
@@ -283,13 +359,25 @@ public class ConeAgent extends AgentModel {
      *
      * @param output from a Brain
      */
-    private void updatePosition(double[] output) {
+    private void updatePosition() {
         // Compute Angle Change  ( -1 Hard Counter Clockwise, +1 Hard Clockwise, 0 is no rotation )
-        float angleChange = (float)(2 * (0.5 - output[0]) * Params.AgentMaxTurnAngle);
+        float angleChange;// = (float)(2 * (0.5 - output[0]) * Params.AgentMaxTurnAngle);
+
+        if( this.output[0] == 0 ) {
+            angleChange = Params.AgentMaxTurnAngle;
+        } else if( this.output[0] <= 0.5 ) {
+            angleChange = (float)(this.output[0] - 0.5) * 2 * Params.AgentMaxTurnAngle;
+        } else if( this.output[0] == 1 ) {
+            angleChange = -Params.AgentMaxTurnAngle;
+        } else {
+            //angleChange = (float)(this.output[0] - 0.5) * -2 * Params.AgentMaxTurnAngle;
+            angleChange = (float)(this.output[0] - 1) * -2 * Params.AgentMaxTurnAngle;
+        }
+
         this.rotation += angleChange;
 
         // Compute Movement Length in Pixels  ( -0.25 Backward, +1 Forward )
-        float movement = (float)(1.25 * (output[1] - 0.2) * Params.AgentMaxMovement);
+        float movement = (float)(1.25 * (this.output[1] - 0.2) * Params.AgentMaxMovement);
 
         // Compute new Agent position
         Vector2 newPosition = this.position.cpy().mulAdd((new Vector2(0,1)).rotate(this.rotation), movement);
@@ -297,8 +385,23 @@ public class ConeAgent extends AgentModel {
         // Bound Check, keep Agent from running over walls or off map
         this.position = boundaryCheckNewPosition(newPosition);
 
+
+
         // Finally, update Sprite position
+        this.sprite.setRotation(this.rotation);
         this.sprite.setCenter(this.position.x, this.position.y);
+
+        // Shoot bullet?
+        if( this.output[2] > 0.75 ) {
+            if( this.fireCooldown-- < 1 ) {
+                //Vector2 bulletDirection = (new Vector2(0, 1)).rotate(this.rotation);
+                //Vector2 bulletStart = new Vector2(bulletDirection.x * 30, bulletDirection.y * 30);
+
+                this.bulletTracker.add(new GreenBullet(this.position.cpy(), this.rotation, this));
+
+                this.fireCooldown = Params.AgentFireRateCooldown;
+            }
+        }
     }
 
 
@@ -309,18 +412,20 @@ public class ConeAgent extends AgentModel {
 
     @Override
     public void drawPath(ShapeRenderer sr) {
-        // Draws the CurrentPath.
-        if( this.preferredPath != null) {
-            for (int i = 1; i < this.preferredPath.getCount(); i++) {
-                sr.rectLine(this.preferredPath.get(i - 1).getPixelX(), this.preferredPath.get(i - 1).getPixelY(),
-                        this.preferredPath.get(i).getPixelX(), this.preferredPath.get(i).getPixelY(), 5);
+        if( this.ALIVE ) {
+            // Draws the CurrentPath.
+            if (this.preferredPath != null) {
+                for (int i = this.preferredPathIndex; i < this.preferredPath.getCount() - 1; i++) {
+                    sr.rectLine(this.preferredPath.get(i + 1).getPixelX(), this.preferredPath.get(i + 1).getPixelY(),
+                            this.preferredPath.get(i).getPixelX(), this.preferredPath.get(i).getPixelY(), 5);
+                }
             }
         }
     }
 
     @Override
     public void drawVision(ShapeRenderer sr) {
-        sr.polygon(this.visionPolygonVertices);
+        if(this.ALIVE) { sr.polygon(this.visionPolygonVertices); }
     }
 
     @Override
@@ -346,7 +451,7 @@ public class ConeAgent extends AgentModel {
      */
     private Vector2 boundaryCheckNewPosition(Vector2 newPosition) {
         Rectangle boundRect = this.sprite.getBoundingRectangle();
-        Polygon   boundPoly = GraphicsHelpers.convertRectangleToPolygon(boundRect);
+        Polygon boundPoly = GraphicsHelpers.convertRectangleToPolygon(boundRect);
 
         /*
          *  Check World Map Boundaries First, just fudge back in if needed
@@ -354,14 +459,18 @@ public class ConeAgent extends AgentModel {
 
         if( boundRect.x < 0 ) {
             newPosition.x += Math.abs((int)boundRect.x);
+            this.rotation += 45 - (random.nextFloat() * 90);
         } else if( boundRect.x > (Params.MapTileSize * Params.NumCellsX) - (Params.AgentTileSize) ) {
             newPosition.x = (float) ((Params.MapTileSize * Params.NumCellsX) - (Params.AgentTileSize));
+            this.rotation += 45 - (random.nextFloat() * 90);
         }
 
         if( boundRect.y < 0 ) {
             newPosition.y += Math.abs((int)boundRect.y);
+            this.rotation += 180 - (5 - (random.nextFloat() * 10));
         } else if( boundRect.y > (Params.MapTileSize * Params.NumCellsY) - (Params.AgentTileSize) ) {
             newPosition.y = (float) ((Params.MapTileSize * Params.NumCellsY) - (Params.AgentTileSize));
+            this.rotation += 180 - (5 - (random.nextFloat() * 10));
         }
 
         /*
@@ -401,9 +510,9 @@ public class ConeAgent extends AgentModel {
             // If bounding rectangles overlap, shuffle Agent in X to keep from overlapping
             if( Intersector.intersectRectangles(boundRect, enemy.getBoundingRectangle(), intersection) ) {
                 if( boundRect.x >= intersection.x ) {
-                    newPosition.x += intersection.x + 0.001f;
+                    newPosition.x = intersection.x + Params.AgentTileSize;
                 } else {
-                    newPosition.x -= intersection.x - 0.001f;
+                    newPosition.x = intersection.x - Params.AgentTileSize;
                 }
             }
         }
@@ -416,11 +525,13 @@ public class ConeAgent extends AgentModel {
             team = teamItr.next();
 
             // If bounding rectangles overlap, shuffle Agent
-            if( Intersector.intersectRectangles(boundRect, team.getBoundingRectangle(), intersection) ) {
+            if( team != this && Intersector.intersectRectangles(boundRect, team.getBoundingRectangle(), intersection) ) {
                 if( boundRect.x >= intersection.x ) {
-                    newPosition.x += intersection.x + 0.001f;
+                    newPosition.x = intersection.x + Params.AgentTileSize;
+                    this.rotation += 10 - (random.nextFloat() * 20);
                 } else {
-                    newPosition.x -= intersection.x - 0.001f;
+                    newPosition.x = intersection.x - Params.AgentTileSize;
+                    this.rotation += 10 - (random.nextFloat() * 20);
                 }
             }
         }

@@ -143,52 +143,100 @@ public class SinglePlayEnvironment extends Environment implements InputProcessor
         
         int startX = 16;
         int startY = 16;
+        int startAngle = 270;
+
+        int sign = 1;
+
+        HashSet<TileNode> prefNodeTracker = new HashSet<TileNode>();
+        GraphPath<TileNode> prefPath = GraphicsHelpers.getPrefPathTest(testLevelID, prefNodeTracker, this.TraverseNodes);
+
+        HashSet<TileNode> prefNodeTracker2 = new HashSet<TileNode>();
+        GraphPath<TileNode> prefPath2 = GraphicsHelpers.getPrefPathTest(testLevelID, prefNodeTracker2, this.TraverseNodes);
+
+        HashSet<TileNode> prefNodeTracker3 = new HashSet<TileNode>();
+        GraphPath<TileNode> prefPath3 = GraphicsHelpers.getPrefPathTest(testLevelID, prefNodeTracker3, this.TraverseNodes);
+
+        HashSet<TileNode> prefNodeTracker4 = new HashSet<TileNode>();
+        GraphPath<TileNode> prefPath4 = GraphicsHelpers.getPrefPathTest(testLevelID, prefNodeTracker4, this.TraverseNodes);
+
+
         
         switch(testLevelID) {
         case 1:
         	startX = 16;
             startY = 16;
+            sign = 1;
+            startAngle = 270;
+
             break;
         case 2:
         	startX = 784;
             startY = 16;
+            sign = -1;
+            startAngle = 180;
             break;
         case 3:
         	startX = 784;
             startY = 1200;
+            sign = -1;
+            startAngle = 90;
             break;
         case 4:
         	startX = 16;
             startY = 1200;
+            sign = 1;
+            startAngle = 225;
             break;
         case 5:
         	startX = 16;
             startY = 16;
+            sign = 1;
+            startAngle = 270;
             break;
         }
         
         // Add the Trainee
         if( NNET ) { 
-        	this.trainees.add(new TrainingAgent(testLevelID, NeuralNetwork.createFromFile(nnetPath), startX, startY,
-                              this.TraverseNodes, random, this.TiledMap, this.trainees, this.shooters, this.BulletTracker));
+        	/* this.trainees.add(new TrainingAgent(testLevelID, NeuralNetwork.createFromFile(nnetPath), startX, startY,
+                              this.TraverseNodes, random, this.TiledMap, this.trainees, this.shooters, this.BulletTracker)); */
+
+            this.trainees.add(new ConeAgent(new Vector2(startX, startY), startAngle, 100, 4 * Params.MapTileSize, 10, Params.TrainingAgentLivePNG,
+                                random, this.collisionLines, Params.PathToBaseNN, prefPath, prefNodeTracker,
+                                this.TiledMap, this.trainees, this.shooters, this.BulletTracker, this.TraverseNodes));
         }
         
         if( PUPPET ) {
         	//this.puppet = new PuppetAgent(this.TiledMap, this.TraverseNodes, new TileAStarPathFinder(), startX, startY, this.BulletTracker, this.shooters);
 
             Vector2 startVector   = new Vector2(startX, startY);
-            int startAngle        = 60;
-            int degreeVision      = 120;
+
+            int degreeVision      = 100;
             int depthVision       = 4 * Params.MapTileSize;
             int health            = 20;
 
-            HashSet<TileNode> tracker = new HashSet<TileNode>();
-            GraphPath<TileNode> prefPath = new DefaultGraphPath<TileNode>(); //GraphicsHelpers.getPrefPathTest(testLevelID, tracker, this.TraverseNodes);
+            //HashSet<TileNode> tracker = new HashSet<TileNode>();
+            //prefPath = new DefaultGraphPath<TileNode>(); //GraphicsHelpers.getPrefPathTest(testLevelID, tracker, this.TraverseNodes);
 
             this.puppet = new ConePuppetAgent(startVector, startAngle, degreeVision, depthVision, health, Params.TrainingAgentLivePNG, true, random,
-                    this.collisionLines, prefPath, tracker, this.TraverseNodes, this.TiledMap, this.trainees, this.shooters, this.BulletTracker);
+                    this.collisionLines, prefPath, prefNodeTracker, this.TraverseNodes, this.TiledMap, this.trainees, this.shooters, this.BulletTracker);
 
             this.trainees.add(this.puppet);
+
+            // Add Team members
+
+
+            trainees.add(new ConePuppetAgent(new Vector2(startX + (sign * 40), startY), startAngle, degreeVision, depthVision, health, Params.TrainingAgentLivePNG, true, random,
+                    this.collisionLines, prefPath2, prefNodeTracker2, this.TraverseNodes, this.TiledMap, this.trainees, this.shooters, this.BulletTracker));
+
+
+
+            trainees.add(new ConePuppetAgent(new Vector2(startX + (sign * 80), startY), startAngle, degreeVision, depthVision, health, Params.TrainingAgentLivePNG, true, random,
+                    this.collisionLines, prefPath3, prefNodeTracker3, this.TraverseNodes, this.TiledMap, this.trainees, this.shooters, this.BulletTracker));
+
+
+
+            trainees.add(new ConePuppetAgent(new Vector2(startX + (sign * 120), startY), startAngle, degreeVision, depthVision, health, Params.TrainingAgentLivePNG, true, random,
+                    this.collisionLines, prefPath4, prefNodeTracker4, this.TraverseNodes, this.TiledMap, this.trainees, this.shooters, this.BulletTracker));
         }
     }
 
@@ -356,23 +404,22 @@ public class SinglePlayEnvironment extends Environment implements InputProcessor
         this.SpriteBatchRenderer.end();
 
 
-        Iterator<AgentModel> agentItr2 = this.trainees.iterator();
+        if( DEBUG ) {
+            Iterator<AgentModel> agentItr2 = this.trainees.iterator();
 
-        ShapeRenderer visionCone = new ShapeRenderer();
-        visionCone.setProjectionMatrix(this.Camera.combined);
-        visionCone.begin(ShapeRenderer.ShapeType.Line);
-        visionCone.setColor(Color.YELLOW);
+            ShapeRenderer visionCone = new ShapeRenderer();
+            visionCone.setProjectionMatrix(this.Camera.combined);
+            visionCone.begin(ShapeRenderer.ShapeType.Line);
+            visionCone.setColor(Color.YELLOW);
 
-        while(agentItr2.hasNext()) {
-            AgentModel currAgent = agentItr2.next();
+            while (agentItr2.hasNext()) {
+                AgentModel currAgent = agentItr2.next();
 
-            if( DEBUG ) {
                 currAgent.drawVision(visionCone);
             }
+
+            visionCone.end();
         }
-
-        visionCone.end();
-
 
         /*// Test Draw the Collision Boxes
         if( DEBUG && DRAW ) {

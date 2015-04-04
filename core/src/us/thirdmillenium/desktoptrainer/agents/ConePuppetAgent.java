@@ -295,8 +295,8 @@ public class ConePuppetAgent extends AgentModel {
 
 
             // The boundRect is used for Sprite collision calcs
-            Rectangle agentBoundRect = new Rectangle(0, 0, Params.AgentTileSize, Params.AgentTileSize);
-            Rectangle bulletBoundRect = new Rectangle(0, 0, 5, 8);   // Hard coded!!! Gah!!
+            //Rectangle agentBoundRect = new Rectangle(0, 0, Params.AgentTileSize, Params.AgentTileSize);
+            //Rectangle bulletBoundRect = new Rectangle(0, 0, 5, 8);   // Hard coded!!! Gah!!
 
 
             // Detect Bullets?
@@ -504,7 +504,33 @@ public class ConePuppetAgent extends AgentModel {
                 // Shoot!!!
                 this.output[2] = 1;
             }
-        } else if (highItem > 0.4) {                       // Path Node  OR Follow Team Member
+        } else if (highItem > 0.4 && highItem < 0.6) {                       // OR Follow Team Member
+            // Rotate toward the path nod
+            //angleChange = highItemIndex - (this.degreesOfView / 2); // - highItemIndex;
+
+            if (Math.abs(angleChange) >= Params.AgentMaxTurnAngle) {
+                this.output[0] = angleChange < 0 ? 0 : 1;
+
+                // Big turn!  Small forward
+                this.output[1] = 0.25;  // Remember, 0.2 means 0 velocity
+            } else if( angleChange == 0 ) {
+                this.output[0] = 0.5;
+
+                // Move!
+                this.output[1] = 0.6;
+
+                // No Shoot!!!
+                this.output[2] = 0;
+            } else {
+                this.output[0] = ((angleChange / Params.AgentMaxTurnAngle) / 2) + 0.5f;
+
+                //if( this.output[0] < 0 ) { this.output[0] += 0.5; }
+                //this.output[0] += 0.5;
+
+                this.output[1] = (-1.7 * Math.pow(this.output[0] - 0.5, 2)) + 0.5;
+            }
+
+        } else if (highItem > 0.6) {                       // Path Node
             // Rotate toward the path nod
             //angleChange = highItemIndex - (this.degreesOfView / 2); // - highItemIndex;
 
@@ -530,7 +556,7 @@ public class ConePuppetAgent extends AgentModel {
                 this.output[1] = (-1.7 * Math.pow(this.output[0] - 0.5, 2)) + 0.8;
             }
 
-        } else if (highItem > 0.2 && highItem < 0.3) {       // Wall
+        }  else if (highItem > 0.2 && highItem < 0.3) {       // Wall
             double leftMostDistant = 0, rightMostDistant = 0, mostDistant = 0;
             int leftMostDistantIndex = 0, rightMostDistantIndex = 0, mostDistantIndex = 0;
 
@@ -562,7 +588,7 @@ public class ConePuppetAgent extends AgentModel {
                 this.output[0] = 0.5;  // Hard counter-clockwise
                 this.output[1] = 1;  // Hard backwards
 
-                this.rotation += 180;
+                //this.rotation += 180;
             } else if (Math.abs(angleChange) > Params.AgentMaxTurnAngle) {
                 // Big turn!  Keep forward though
                 this.output[0] = angleChange < 0 ? 1 : 0;
@@ -614,7 +640,7 @@ public class ConePuppetAgent extends AgentModel {
         System.out.println("Rotation: " + this.rotation + "  X: " + this.position.x + "  Y:" + this.position.y);
 
         // Shoot bullet?
-        if( this.output[2] == 1 ) {
+        if( this.output[2] > 0.75 ) {
            if( this.fireCooldown-- < 1 ) {
                 //Vector2 bulletDirection = (new Vector2(0, 1)).rotate(this.rotation);
                 //Vector2 bulletStart = new Vector2(bulletDirection.x * 30, bulletDirection.y * 30);
@@ -665,7 +691,7 @@ public class ConePuppetAgent extends AgentModel {
 
     @Override
     public long getScore() {
-        return 0;
+        return this.preferredPathIndex;
     }
 
 
@@ -681,17 +707,22 @@ public class ConePuppetAgent extends AgentModel {
         /*
          *  Check World Map Boundaries First, just fudge back in if needed
          */
+        float bounceAngle = 150;
 
         if( boundRect.x < 0 ) {
             newPosition.x += Math.abs((int)boundRect.x);
+            this.rotation += bounceAngle - (random.nextFloat() * bounceAngle * 2);
         } else if( boundRect.x > (Params.MapTileSize * Params.NumCellsX) - (Params.AgentTileSize) ) {
             newPosition.x = (float) ((Params.MapTileSize * Params.NumCellsX) - (Params.AgentTileSize));
+            this.rotation += bounceAngle - (random.nextFloat() * bounceAngle * 2);
         }
 
         if( boundRect.y < 0 ) {
             newPosition.y += Math.abs((int)boundRect.y);
+            this.rotation += bounceAngle - (random.nextFloat() * bounceAngle * 2);
         } else if( boundRect.y > (Params.MapTileSize * Params.NumCellsY) - (Params.AgentTileSize) ) {
             newPosition.y = (float) ((Params.MapTileSize * Params.NumCellsY) - (Params.AgentTileSize));
+            this.rotation += bounceAngle - (random.nextFloat() * bounceAngle * 2);
         }
 
         /*
@@ -712,6 +743,8 @@ public class ConePuppetAgent extends AgentModel {
                 if( Intersector.overlapConvexPolygons(boundPoly, polyBound, mtv)) {
                     newPosition.x += mtv.depth * mtv.normal.x;
                     newPosition.y += mtv.depth * mtv.normal.y;
+
+                    this.rotation += bounceAngle - (random.nextFloat() * bounceAngle * 2);
                 }
             }
         }
@@ -731,9 +764,9 @@ public class ConePuppetAgent extends AgentModel {
             // If bounding rectangles overlap, shuffle Agent in X to keep from overlapping
             if( Intersector.intersectRectangles(boundRect, enemy.getBoundingRectangle(), intersection) ) {
                 if( boundRect.x >= intersection.x ) {
-                    newPosition.x += intersection.x;
+                    newPosition.x = intersection.x + Params.AgentTileSize;
                 } else {
-                    newPosition.x -= intersection.x;
+                    newPosition.x = intersection.x - Params.AgentTileSize;
                 }
             }
         }
@@ -748,10 +781,12 @@ public class ConePuppetAgent extends AgentModel {
             // If bounding rectangles overlap, shuffle Agent
             if( team != this && Intersector.intersectRectangles(boundRect, team.getBoundingRectangle(), intersection) ) {
                 if( boundRect.x >= intersection.x ) {
-                    newPosition.x += intersection.x;
+                    newPosition.x = intersection.x + Params.AgentTileSize;
                 } else {
-                    newPosition.x -= intersection.x;
+                    newPosition.x = intersection.x - Params.AgentTileSize;
                 }
+
+                this.rotation += 45 - (random.nextFloat() * 90);
             }
         }
 
